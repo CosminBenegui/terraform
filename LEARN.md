@@ -2,67 +2,39 @@
 
 ## The problem
 
-GitHub's cloud runners live on the public internet. Your VM is at `192.168.0.150` (private LAN). Cloud runners **cannot SSH into it**.
-
-So we installed a **self-hosted runner** on the VM. GitHub sends jobs to that machine instead.
+GitHub cloud runners cannot reach private IP `192.168.0.150`.  
+A **self-hosted runner** on the VM pulls jobs and runs Terraform there.
 
 ```text
 You push to GitHub
         |
         v
-GitHub Actions (orchestrator in the cloud)
-        |
-        v  (job assigned to your runner)
-VM 192.168.0.150  -->  debian-terraform service
+GitHub Actions
         |
         v
-terraform plan / apply  (workspaces: test, dev)
+VM runner (debian-terraform)
+        |
+        v
+terraform apply  (workspace: test)
 ```
 
 ## Pieces on the VM
 
 | Path / name | Role |
 |-------------|------|
-| `~/actions-runner` | GitHub Actions agent software |
-| systemd service `actions.runner...debian-terraform` | Keeps the runner online after reboot |
-| `/home/cosmin/terraform-project` | Stable folder where `terraform apply` runs (state stays here) |
-| workspaces `test` / `dev` | Separate state + separate nginx containers/ports |
+| `~/actions-runner` | GitHub Actions agent |
+| `/home/cosmin/terraform-project` | Stable Terraform working dir + state |
+| workspace `test` | Only lab environment for now |
+| `~/media/{movies,tv,downloads}` | Shared media folders |
 
-## Why a fixed project path?
+## Why only `test`?
 
-Each Actions job checks out code into a temporary `_work` folder. If you ran Terraform only there, **state would be lost** between runs.
-
-The workflow copies the repo into `/home/cosmin/terraform-project` and runs Terraform there so `terraform.tfstate.d/dev` and `.../test` survive.
-
-## What `main.tf` does
-
-- Uses the **Docker** provider to run `nginx:alpine`
-- Container name: `terraform-nginx-<workspace>`
-- Ports: `dev` → host `8081`, `test` → host `8082`
-- Writes `hello-<workspace>.txt` so you can see a local file change too
-
-## Workflow behavior
-
-- **Push to `main`** → plan + apply on workspace **`test`**
-- **Actions → Run workflow** → choose `dev` or `test`, and `plan` or `apply`
-
-## Commands worth knowing on the VM
-
-```bash
-# Runner
-sudo ~/actions-runner/svc.sh status
-
-# Terraform (after a successful apply)
-cd ~/terraform-project
-terraform workspace list
-terraform workspace select test
-terraform state list
-docker ps --filter name=terraform-nginx
-```
+One VM + fixed host ports (`32400`, `7878`, …). A parallel `dev` stack would clash.  
+Reintroduce `dev` later with different names/ports or another machine.
 
 ## Mental model
 
-1. **Git** = source of truth for `.tf` files  
-2. **GitHub Actions** = automation trigger  
-3. **Self-hosted runner** = “do the work on MY VM”  
-4. **Terraform workspaces** = same code, isolated state per environment  
+1. **Git** = source of truth for `.tf`  
+2. **GitHub Actions** = automation  
+3. **Self-hosted runner** = run on your VM  
+4. **Terraform apply** = make Docker match the code  

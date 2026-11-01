@@ -12,7 +12,8 @@ terraform {
 provider "docker" {}
 
 locals {
-  env  = terraform.workspace
+  # Single lab env for now (workspace "test" only — one VM, shared ports).
+  env  = "test"
   tz   = "Europe/Bucharest"
   puid = "1000"
   pgid = "1000"
@@ -21,14 +22,15 @@ locals {
   media_root = "/home/cosmin/media"
 }
 
-# Shared network — plex, prowlarr, radarr, sonarr, seerr (Overseerr-compatible)
+# Shared network — plex, prowlarr, radarr, sonarr, seerr
 resource "docker_network" "media" {
   name = "media-net-${local.env}"
 
-  # Include gateway — Docker sets it automatically; omitting it forces replace every apply.
+  # IPAM = private IP pool for this Docker network (course "address_space").
+  # Pin gateway so plan doesn't recreate the network every run.
   ipam_config {
-    subnet  = local.env == "dev" ? "10.10.0.0/16" : "10.20.0.0/16"
-    gateway = local.env == "dev" ? "10.20.0.1" : "10.20.0.1"
+    subnet  = "10.20.0.0/16"
+    gateway = "10.20.0.1"
   }
 }
 

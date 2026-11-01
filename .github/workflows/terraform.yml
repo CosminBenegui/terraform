@@ -5,14 +5,6 @@ on:
     branches: [main]
   workflow_dispatch:
     inputs:
-      workspace:
-        description: Terraform workspace
-        required: true
-        type: choice
-        options:
-          - test
-          - dev
-        default: test
       action:
         description: Plan only or apply
         required: true
@@ -52,16 +44,10 @@ jobs:
         working-directory: ${{ env.PROJECT_DIR }}
         run: terraform init -upgrade
 
-      - name: Select workspace
+      - name: Select workspace test
         working-directory: ${{ env.PROJECT_DIR }}
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            WS="${{ inputs.workspace }}"
-          else
-            WS="test"
-          fi
-          echo "WORKSPACE=$WS" >> "$GITHUB_ENV"
-          terraform workspace select "$WS" || terraform workspace new "$WS"
+          terraform workspace select test || terraform workspace new test
 
       - name: Terraform plan
         working-directory: ${{ env.PROJECT_DIR }}

@@ -2,18 +2,14 @@
 
 Self-hosted GitHub Actions deploy to the Debian VM (`debian-terraform` runner).
 
-## Workspaces
+## Environment
 
-- `test` — applied automatically on push to `main`
-- `dev` — manual only (`workflow_dispatch`)
+Single lab workspace: **`test`** (one VM — ports/names can’t host a second full media stack).
 
-Each workspace runs an `nginx:alpine` container (`terraform-nginx-<workspace>`) and writes `hello-<workspace>.txt`.
+Stack: Plex, Prowlarr, Radarr, Sonarr, Seerr on Docker network `media-net-test`.
 
-| Workspace | Host port |
-|-----------|-----------|
-| dev       | 8081      |
-| test      | 8082      |
+See [MEDIA-SETUP.md](MEDIA-SETUP.md) for UI linking.
 
 ## Manual run
 
-GitHub → Actions → Terraform → Run workflow → pick workspace + `plan`/`apply`.
+GitHub → Actions → Terraform → Run workflow → `plan` or `apply` (always workspace `test`).
