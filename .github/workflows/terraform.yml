@@ -34,7 +34,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Sync project to fixed VM path
+      - name: Prepare Terraform working directory
         run: |
           # Keep Terraform state on a stable path on the VM (not the runner _work folder).
           mkdir -p "$PROJECT_DIR"
