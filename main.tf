@@ -25,8 +25,10 @@ locals {
 resource "docker_network" "media" {
   name = "media-net-${local.env}"
 
+  # Include gateway — Docker sets it automatically; omitting it forces replace every apply.
   ipam_config {
-    subnet = local.env == "dev" ? "10.10.0.0/16" : "10.20.0.0/16"
+    subnet  = local.env == "dev" ? "10.10.0.0/16" : "10.20.0.0/16"
+    gateway = local.env == "dev" ? "10.10.0.1" : "10.20.0.1"
   }
 }
 
