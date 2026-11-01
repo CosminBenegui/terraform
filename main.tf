@@ -49,3 +49,4 @@ output "container_name" {
 output "http_port" {
   value = local.http_port
 }
+
