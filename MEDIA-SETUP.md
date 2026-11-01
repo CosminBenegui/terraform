@@ -1,6 +1,6 @@
 # Media stack — wire-up after apply
 
-Terraform puts **plex**, **prowlarr**, **radarr**, **sonarr** on `media-net-*` so they resolve each other by name.
+Terraform puts **plex**, **prowlarr**, **radarr**, **sonarr**, **seerr** on `media-net-*` so they resolve each other by name.
 
 ## 0) Folders on the VM (once)
 
@@ -18,6 +18,7 @@ Then push/apply this Terraform.
 | Prowlarr | http://192.168.0.150:9696 |
 | Radarr | http://192.168.0.150:7878 |
 | Sonarr | http://192.168.0.150:8989 |
+| Seerr | http://192.168.0.150:5055 |
 
 ## 2) Link Prowlarr → Radarr
 
@@ -43,6 +44,16 @@ Same as above, App = **Sonarr**, URL = `http://sonarr:8989`
 - TV → folder `/tv`
 
 Plex does not need Prowlarr API keys; it just reads the same files Radarr/Sonarr write.
+
+## 6) Link Seerr → Plex / Radarr / Sonarr
+
+1. Open http://192.168.0.150:5055 and finish the setup wizard
+2. **Plex**: sign in / connect; if it asks for a server URL use `http://plex:32400`
+3. **Radarr**: Settings → Services → Radarr → URL `http://radarr:7878` + Radarr API key
+4. **Sonarr**: same with `http://sonarr:8989` + Sonarr API key
+5. Test each service → Save
+
+Seerr is the request UI; it tells Radarr/Sonarr what to grab. Plex shows the files afterward.
 
 ## Note
 

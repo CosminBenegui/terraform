@@ -21,7 +21,7 @@ locals {
   media_root = "/home/cosmin/media"
 }
 
-# Shared network — containers reach each other by name: plex, prowlarr, radarr, sonarr
+# Shared network — plex, prowlarr, radarr, sonarr, seerr (Overseerr-compatible)
 resource "docker_network" "media" {
   name = "media-net-${local.env}"
 
@@ -52,6 +52,11 @@ resource "docker_image" "sonarr" {
   keep_locally = true
 }
 
+resource "docker_image" "seerr" {
+  name         = "ghcr.io/seerr-team/seerr:latest"
+  keep_locally = true
+}
+
 # --- Config volumes (per app) ---
 
 resource "docker_volume" "plex_config" {
@@ -68,6 +73,10 @@ resource "docker_volume" "radarr_config" {
 
 resource "docker_volume" "sonarr_config" {
   name = "sonarr-config-${local.env}"
+}
+
+resource "docker_volume" "seerr_config" {
+  name = "seerr-config-${local.env}"
 }
 
 # --- Apps ---
@@ -201,12 +210,40 @@ resource "docker_container" "sonarr" {
   }
 }
 
+resource "docker_container" "seerr" {
+  name  = "seerr"
+  image = docker_image.seerr.image_id
+
+  restart = "unless-stopped"
+  env = [
+    "PUID=${local.puid}",
+    "PGID=${local.pgid}",
+    "TZ=${local.tz}",
+    "PORT=5055",
+  ]
+
+  networks_advanced {
+    name = docker_network.media.name
+  }
+
+  volumes {
+    volume_name    = docker_volume.seerr_config.name
+    container_path = "/app/config"
+  }
+
+  ports {
+    internal = 5055
+    external = 5055
+  }
+}
+
 output "urls" {
   value = {
     plex     = "http://192.168.0.150:32400/web"
     prowlarr = "http://192.168.0.150:9696"
     radarr   = "http://192.168.0.150:7878"
     sonarr   = "http://192.168.0.150:8989"
+    seerr    = "http://192.168.0.150:5055"
   }
 }
 
@@ -214,6 +251,9 @@ output "internal_links" {
   value = {
     radarr_from_prowlarr = "http://radarr:7878"
     sonarr_from_prowlarr = "http://sonarr:8989"
+    plex_from_seerr      = "http://plex:32400"
+    radarr_from_seerr    = "http://radarr:7878"
+    sonarr_from_seerr    = "http://sonarr:8989"
     movies_path_in_apps  = "/movies"
     tv_path_in_apps      = "/tv"
     downloads_path       = "/downloads"
