@@ -6,20 +6,23 @@ terraform {
       source  = "kreuzwerker/docker"
       version = "~> 3.0"
     }
-    local = {
-      source  = "hashicorp/local"
-      version = "~> 2.5"
-    }
   }
 }
 
 provider "docker" {}
 
 locals {
-  env = terraform.workspace
-
-  # Avoid port clashes between workspaces on the same VM
+  env       = terraform.workspace
   http_port = local.env == "dev" ? 8081 : 8082
+}
+
+# Private network (course "VNet" + address_space → Docker IPAM subnet).
+resource "docker_network" "main" {
+  name = "vnet-main-${local.env}"
+
+  ipam_config {
+    subnet = "10.0.0.0/16"
+  }
 }
 
 resource "docker_image" "nginx" {
@@ -27,9 +30,14 @@ resource "docker_image" "nginx" {
   keep_locally = true
 }
 
+# Nginx container attached to docker_network.main
 resource "docker_container" "nginx" {
-  name  = "terraform-nginx-${local.env}"
+  name  = "nginx-${local.env}"
   image = docker_image.nginx.image_id
+
+  networks_advanced {
+    name = docker_network.main.name
+  }
 
   ports {
     internal = 80
@@ -37,16 +45,14 @@ resource "docker_container" "nginx" {
   }
 }
 
-resource "local_file" "hello" {
-  filename = "${path.module}/hello-${local.env}.txt"
-  content  = "Hello from Terraform workspace ${local.env}\n"
+output "vnet_name" {
+  value = docker_network.main.name
 }
 
-output "container_name" {
+output "nginx_name" {
   value = docker_container.nginx.name
 }
 
 output "http_port" {
   value = local.http_port
 }
-
