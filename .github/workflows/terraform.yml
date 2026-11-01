@@ -26,40 +26,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Ensure Docker
-        run: |
-          set -euo pipefail
-          if ! command -v docker >/dev/null 2>&1; then
-            echo "Installing Docker..."
-            sudo apt-get update -qq
-            sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq docker.io \
-              || sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq docker-ce docker-ce-cli containerd.io
-          fi
-          sudo systemctl enable --now docker
-          sudo usermod -aG docker "$USER" || true
-          # Runner systemd process often lacks docker group until restart.
-          # Lab: open socket for this job every run.
-          sudo chmod 666 /var/run/docker.sock
-          docker version
-          docker ps
-
-      - name: Ensure Terraform
-        run: |
-          set -euo pipefail
-          if command -v terraform >/dev/null 2>&1; then
-            terraform version
-            exit 0
-          fi
-          echo "Installing Terraform..."
-          sudo apt-get update -qq
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq curl unzip
-          curl -fsSL -o /tmp/terraform.zip \
-            https://releases.hashicorp.com/terraform/1.10.5/terraform_1.10.5_linux_amd64.zip
-          sudo unzip -o /tmp/terraform.zip -d /usr/local/bin
-          sudo chmod +x /usr/local/bin/terraform
-          rm -f /tmp/terraform.zip
-          terraform version
-
       - name: Prepare Terraform working directory
         run: |
           # Keep Terraform state on a stable path on the VM (not the runner _work folder).
