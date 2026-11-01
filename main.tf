@@ -12,47 +12,219 @@ terraform {
 provider "docker" {}
 
 locals {
-  env       = terraform.workspace
-  http_port = local.env == "dev" ? 8081 : 8082
+  env  = terraform.workspace
+  tz   = "Europe/Bucharest"
+  puid = "1000"
+  pgid = "1000"
+
+  # Host paths on the VM (shared so *arr + Plex see the same files)
+  media_root = "/home/cosmin/media"
 }
 
-# Private network (course "VNet" + address_space → Docker IPAM subnet).
-resource "docker_network" "main" {
-  name = "vnet-main-${local.env}"
+# Shared network — containers reach each other by name: plex, prowlarr, radarr, sonarr
+resource "docker_network" "media" {
+  name = "media-net-${local.env}"
 
   ipam_config {
-    subnet = "10.0.0.0/16"
+    subnet = local.env == "dev" ? "10.10.0.0/16" : "10.20.0.0/16"
   }
 }
 
-resource "docker_image" "nginx" {
-  name         = "nginx:alpine"
+# --- Images ---
+
+resource "docker_image" "plex" {
+  name         = "lscr.io/linuxserver/plex:latest"
   keep_locally = true
 }
 
-# Nginx container attached to docker_network.main
-resource "docker_container" "nginx" {
-  name  = "nginx-${local.env}"
-  image = docker_image.nginx.image_id
+resource "docker_image" "prowlarr" {
+  name         = "lscr.io/linuxserver/prowlarr:latest"
+  keep_locally = true
+}
+
+resource "docker_image" "radarr" {
+  name         = "lscr.io/linuxserver/radarr:latest"
+  keep_locally = true
+}
+
+resource "docker_image" "sonarr" {
+  name         = "lscr.io/linuxserver/sonarr:latest"
+  keep_locally = true
+}
+
+# --- Config volumes (per app) ---
+
+resource "docker_volume" "plex_config" {
+  name = "plex-config-${local.env}"
+}
+
+resource "docker_volume" "prowlarr_config" {
+  name = "prowlarr-config-${local.env}"
+}
+
+resource "docker_volume" "radarr_config" {
+  name = "radarr-config-${local.env}"
+}
+
+resource "docker_volume" "sonarr_config" {
+  name = "sonarr-config-${local.env}"
+}
+
+# --- Apps ---
+
+resource "docker_container" "plex" {
+  name  = "plex"
+  image = docker_image.plex.image_id
+
+  restart = "unless-stopped"
+  env = [
+    "PUID=${local.puid}",
+    "PGID=${local.pgid}",
+    "TZ=${local.tz}",
+    "VERSION=docker",
+  ]
 
   networks_advanced {
-    name = docker_network.main.name
+    name = docker_network.media.name
+  }
+
+  volumes {
+    volume_name    = docker_volume.plex_config.name
+    container_path = "/config"
+  }
+  volumes {
+    host_path      = "${local.media_root}/movies"
+    container_path = "/movies"
+  }
+  volumes {
+    host_path      = "${local.media_root}/tv"
+    container_path = "/tv"
   }
 
   ports {
-    internal = 80
-    external = local.http_port
+    internal = 32400
+    external = 32400
   }
 }
 
-output "vnet_name" {
-  value = docker_network.main.name
+resource "docker_container" "prowlarr" {
+  name  = "prowlarr"
+  image = docker_image.prowlarr.image_id
+
+  restart = "unless-stopped"
+  env = [
+    "PUID=${local.puid}",
+    "PGID=${local.pgid}",
+    "TZ=${local.tz}",
+  ]
+
+  networks_advanced {
+    name = docker_network.media.name
+  }
+
+  volumes {
+    volume_name    = docker_volume.prowlarr_config.name
+    container_path = "/config"
+  }
+
+  ports {
+    internal = 9696
+    external = 9696
+  }
 }
 
-output "nginx_name" {
-  value = docker_container.nginx.name
+resource "docker_container" "radarr" {
+  name  = "radarr"
+  image = docker_image.radarr.image_id
+
+  restart = "unless-stopped"
+  env = [
+    "PUID=${local.puid}",
+    "PGID=${local.pgid}",
+    "TZ=${local.tz}",
+  ]
+
+  networks_advanced {
+    name = docker_network.media.name
+  }
+
+  volumes {
+    volume_name    = docker_volume.radarr_config.name
+    container_path = "/config"
+  }
+  volumes {
+    host_path      = "${local.media_root}/movies"
+    container_path = "/movies"
+  }
+  volumes {
+    host_path      = "${local.media_root}/downloads"
+    container_path = "/downloads"
+  }
+
+  ports {
+    internal = 7878
+    external = 7878
+  }
 }
 
-output "http_port" {
-  value = local.http_port
+resource "docker_container" "sonarr" {
+  name  = "sonarr"
+  image = docker_image.sonarr.image_id
+
+  restart = "unless-stopped"
+  env = [
+    "PUID=${local.puid}",
+    "PGID=${local.pgid}",
+    "TZ=${local.tz}",
+  ]
+
+  networks_advanced {
+    name = docker_network.media.name
+  }
+
+  volumes {
+    volume_name    = docker_volume.sonarr_config.name
+    container_path = "/config"
+  }
+  volumes {
+    host_path      = "${local.media_root}/tv"
+    container_path = "/tv"
+  }
+  volumes {
+    host_path      = "${local.media_root}/downloads"
+    container_path = "/downloads"
+  }
+
+  ports {
+    internal = 8989
+    external = 8989
+  }
+}
+
+output "urls" {
+  value = {
+    plex     = "http://192.168.0.150:32400/web"
+    prowlarr = "http://192.168.0.150:9696"
+    radarr   = "http://192.168.0.150:7878"
+    sonarr   = "http://192.168.0.150:8989"
+  }
+}
+
+output "internal_links" {
+  value = {
+    radarr_from_prowlarr = "http://radarr:7878"
+    sonarr_from_prowlarr = "http://sonarr:8989"
+    movies_path_in_apps  = "/movies"
+    tv_path_in_apps      = "/tv"
+    downloads_path       = "/downloads"
+  }
+}
+
+output "media_host_paths" {
+  value = {
+    root      = local.media_root
+    movies    = "${local.media_root}/movies"
+    tv        = "${local.media_root}/tv"
+    downloads = "${local.media_root}/downloads"
+  }
 }
