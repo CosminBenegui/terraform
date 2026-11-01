@@ -1,0 +1,82 @@
+name: Terraform
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      workspace:
+        description: Terraform workspace
+        required: true
+        type: choice
+        options:
+          - test
+          - dev
+        default: test
+      action:
+        description: Plan only or apply
+        required: true
+        type: choice
+        options:
+          - plan
+          - apply
+        default: plan
+
+jobs:
+  terraform:
+    runs-on: [self-hosted, terraform-vm]
+    env:
+      TF_IN_AUTOMATION: "true"
+      TF_INPUT: "false"
+      PROJECT_DIR: /home/cosmin/terraform-project
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Sync project to fixed VM path
+        run: |
+          # Keep Terraform state on a stable path on the VM (not the runner _work folder).
+          mkdir -p "$PROJECT_DIR"
+          find "$PROJECT_DIR" -mindepth 1 -maxdepth 1 \
+            ! -name '.terraform' \
+            ! -name 'terraform.tfstate' \
+            ! -name 'terraform.tfstate.backup' \
+            ! -name 'terraform.tfstate.d' \
+            ! -name 'hello-*.txt' \
+            -exec rm -rf {} +
+          cp -a . "$PROJECT_DIR"/
+          rm -rf "$PROJECT_DIR/.git"
+
+      - name: Terraform init
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: terraform init -upgrade
+
+      - name: Select workspace
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            WS="${{ inputs.workspace }}"
+          else
+            WS="test"
+          fi
+          echo "WORKSPACE=$WS" >> "$GITHUB_ENV"
+          terraform workspace select "$WS" || terraform workspace new "$WS"
+
+      - name: Terraform plan
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: terraform plan -out=tfplan -input=false
+
+      - name: Terraform apply
+        if: >
+          github.event_name == 'push' ||
+          (github.event_name == 'workflow_dispatch' && inputs.action == 'apply')
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: terraform apply -auto-approve -input=false tfplan
+
+      - name: Show outputs
+        if: >
+          github.event_name == 'push' ||
+          (github.event_name == 'workflow_dispatch' && inputs.action == 'apply')
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: terraform output

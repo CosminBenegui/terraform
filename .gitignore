@@ -1,0 +1,29 @@
+# Local .terraform directories
+.terraform/
+.terraform.tfstate.lock.info
+
+# State files (kept on the self-hosted VM working dir)
+*.tfstate
+*.tfstate.*
+terraform.tfstate.d/
+crash.log
+crash.*.log
+
+# Generated files
+hello-*.txt
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# CLI and editor
+.terraformrc
+terraform.rc
+*.tfvars
+!example.tfvars
+.idea/
+.vscode/
+*.swp
+
+# Local helper scripts (not part of the project)
+_vm_*.py
