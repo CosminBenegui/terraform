@@ -1,8 +1,8 @@
-# How this setup works (learning notes)
+﻿# How this setup works (learning notes)
 
 ## The problem
 
-GitHub cloud runners cannot reach private IP `192.168.0.150`.  
+GitHub cloud runners cannot reach private IP `192.168.0.120`.  
 A **self-hosted runner** on the VM pulls jobs and runs Terraform there.
 
 ```text
@@ -29,7 +29,7 @@ terraform apply  (workspace: test)
 
 ## Why only `test`?
 
-One VM + fixed host ports (`32400`, `7878`, …). A parallel `dev` stack would clash.  
+One VM + fixed host ports (`32400`, `7878`, â€¦). A parallel `dev` stack would clash.  
 Reintroduce `dev` later with different names/ports or another machine.
 
 ## Mental model

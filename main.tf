@@ -1,4 +1,4 @@
-terraform {
+﻿terraform {
   required_version = ">= 1.5.0"
 
   required_providers {
@@ -12,7 +12,7 @@ terraform {
 provider "docker" {}
 
 locals {
-  # Single lab env for now (workspace "test" only — one VM, shared ports).
+  # Single lab env for now (workspace "test" only â€” one VM, shared ports).
   env  = "test"
   tz   = "Europe/Bucharest"
   puid = "1000"
@@ -22,7 +22,7 @@ locals {
   media_root = "/home/cosmin/media"
 }
 
-# Shared network — plex, prowlarr, radarr, sonarr, seerr
+# Shared network â€” plex, prowlarr, radarr, sonarr, seerr
 resource "docker_network" "media" {
   name = "media-net-${local.env}"
 
@@ -243,11 +243,11 @@ resource "docker_container" "seerr" {
 
 output "urls" {
   value = {
-    plex     = "http://192.168.0.150:32400/web"
-    prowlarr = "http://192.168.0.150:9696"
-    radarr   = "http://192.168.0.150:7878"
-    sonarr   = "http://192.168.0.150:8989"
-    seerr    = "http://192.168.0.150:5055"
+    plex     = "http://192.168.0.120:32400/web"
+    prowlarr = "http://192.168.0.120:9696"
+    radarr   = "http://192.168.0.120:7878"
+    sonarr   = "http://192.168.0.120:8989"
+    seerr    = "http://192.168.0.120:5055"
   }
 }
 
