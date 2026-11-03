@@ -25,8 +25,8 @@ locals {
   puid             = "1000"
   pgid             = "1000"
   media_root       = "/home/cosmin/media"
-  # Already on the bare-metal host (not downloaded by Terraform).
-  windows_iso_path = "/home/cosmin/Downloads/SERVER_EVAL_x64FRE_en-us.iso"
+  # Staged into the libvirt pool by CI (QEMU cannot read files under /home/cosmin).
+  windows_iso_path = "/var/lib/libvirt/images/SERVER_EVAL_x64FRE_en-us.iso"
 }
 
 # --- Networks: Docker (Media Stack) & Libvirt (Windows VM) ---

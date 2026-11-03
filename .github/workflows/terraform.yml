@@ -45,12 +45,19 @@ jobs:
 
       - name: Ensure Windows Server ISO exists
         run: |
-          ISO=/home/cosmin/Downloads/SERVER_EVAL_x64FRE_en-us.iso
-          if [ ! -f "$ISO" ]; then
-            echo "Missing $ISO — place the Eval ISO on the bare-metal host before apply."
+          SRC=/home/cosmin/Downloads/SERVER_EVAL_x64FRE_en-us.iso
+          DST=/var/lib/libvirt/images/SERVER_EVAL_x64FRE_en-us.iso
+          if [ ! -f "$SRC" ]; then
+            echo "Missing $SRC — place the Eval ISO on the bare-metal host before apply."
             exit 1
           fi
-          ls -lh "$ISO"
+          # QEMU runs as libvirt-qemu and cannot traverse /home/cosmin — stage into the pool.
+          if [ ! -f "$DST" ]; then
+            sudo cp "$SRC" "$DST"
+          fi
+          sudo chown libvirt-qemu:kvm "$DST"
+          sudo chmod 644 "$DST"
+          ls -lh "$SRC" "$DST"
 
       # libvirt_domain xml { xslt = ... } needs xsltproc on the runner host.
       - name: Ensure xsltproc
