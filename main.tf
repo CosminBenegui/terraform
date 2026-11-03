@@ -117,9 +117,9 @@ resource "libvirt_volume" "windows_os_disk" {
   format = "qcow2"
   size   = 68719476736 # 64 GB
 
-  # QEMU (libvirt-qemu) must own the image or domain start fails with Permission denied.
+  # Provider often leaves the volume as root:root; QEMU runs as libvirt-qemu.
   provisioner "local-exec" {
-    command = "sudo chown libvirt-qemu:kvm '${self.id}' && sudo chmod 660 '${self.id}'"
+    command = "sudo chown libvirt-qemu:kvm '${self.id}' && sudo chmod 660 '${self.id}' && ls -la '${self.id}'"
   }
 }
 
