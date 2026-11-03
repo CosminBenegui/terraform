@@ -43,22 +43,15 @@ jobs:
       - name: Ensure media host folders
         run: mkdir -p /home/cosmin/media/{movies,tv,downloads}
 
-      # Orphans from failed applies (must use system URI — plain virsh uses session and misses them).
-      - name: Cleanup orphan Windows libvirt domains
+      # QEMU "Permission denied" on pool volumes is AppArmor; disable libvirt security driver on this lab host.
+      - name: Disable libvirt AppArmor security driver
         run: |
-          URI=qemu:///system
-          # Only pre-managed leftovers — do not undefine windows-srv-test (current TF name).
-          for dom in windows-srv windows-server-test; do
-            virsh -c "$URI" destroy "$dom" 2>/dev/null || true
-            virsh -c "$URI" undefine "$dom" --nvram 2>/dev/null || virsh -c "$URI" undefine "$dom" 2>/dev/null || true
-          done
-          for img in /var/lib/libvirt/images/windows-srv-disk-*.qcow2 \
-                     /var/lib/libvirt/images/windows-server-os-*.qcow2; do
-            [ -e "$img" ] || continue
-            sudo chown libvirt-qemu:kvm "$img"
-            sudo chmod 660 "$img"
-            ls -la "$img"
-          done
+          if ! sudo grep -qE '^security_driver\s*=\s*"none"' /etc/libvirt/qemu.conf; then
+            echo 'security_driver = "none"' | sudo tee -a /etc/libvirt/qemu.conf
+            sudo systemctl restart libvirtd
+            sleep 2
+          fi
+          sudo grep -E '^security_driver' /etc/libvirt/qemu.conf
 
       - name: Terraform init
         working-directory: ${{ env.PROJECT_DIR }}
@@ -68,6 +61,28 @@ jobs:
         working-directory: ${{ env.PROJECT_DIR }}
         run: |
           terraform workspace select test || terraform workspace new test
+
+      # Orphans from failed creates sit outside TF state; must use qemu:///system (not session).
+      - name: Cleanup orphan Windows libvirt domains
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: |
+          URI=qemu:///system
+          for dom in windows-srv windows-server-test; do
+            virsh -c "$URI" destroy "$dom" 2>/dev/null || true
+            virsh -c "$URI" undefine "$dom" --nvram 2>/dev/null || virsh -c "$URI" undefine "$dom" 2>/dev/null || true
+          done
+          # Failed create leaves windows-srv-test defined but absent from state — clear only then.
+          if ! terraform state list 2>/dev/null | grep -qx 'libvirt_domain.windows_server'; then
+            virsh -c "$URI" destroy windows-srv-test 2>/dev/null || true
+            virsh -c "$URI" undefine windows-srv-test --nvram 2>/dev/null || virsh -c "$URI" undefine windows-srv-test 2>/dev/null || true
+          fi
+          for img in /var/lib/libvirt/images/windows-srv-disk-*.qcow2 \
+                     /var/lib/libvirt/images/windows-server-os-*.qcow2; do
+            [ -e "$img" ] || continue
+            sudo chown libvirt-qemu:kvm "$img"
+            sudo chmod 660 "$img"
+            ls -la "$img"
+          done
 
       - name: Terraform plan
         working-directory: ${{ env.PROJECT_DIR }}
