@@ -112,14 +112,14 @@ resource "docker_volume" "qbittorrent_config" {
 # --- Libvirt Resources (Windows Server VM) ---
 
 resource "libvirt_volume" "windows_os_disk" {
-  name   = "windows-server-os-${local.env}.qcow2"
+  name   = "windows-srv-disk-${local.env}.qcow2"
   pool   = libvirt_pool.default.name
   format = "qcow2"
   size   = 68719476736 # 64 GB
 }
 
 resource "libvirt_domain" "windows_server" {
-  name   = "windows-server-${local.env}"
+  name   = "windows-srv"
   memory = 4096
   vcpu   = 2
 
@@ -127,12 +127,10 @@ resource "libvirt_domain" "windows_server" {
     volume_id = libvirt_volume.windows_os_disk.id
   }
 
-  # Placa de rețea 1 (Folosește rețeaua NAT 'default' a libvirt pentru acces extern)
   network_interface {
     network_name = "default"
   }
 
-  # Placa de rețea 2 (A doua placă - complet izolată, internă)
   network_interface {
     network_id     = libvirt_network.internal_net.id
     wait_for_lease = false
