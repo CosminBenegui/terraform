@@ -29,7 +29,6 @@ locals {
 
 # --- Networks: Docker (Media Stack) & Libvirt (Windows VM) ---
 
-# Rețeaua Docker pentru aplicațiile media
 resource "docker_network" "media" {
   name = "media-net-${local.env}"
 
@@ -39,11 +38,17 @@ resource "docker_network" "media" {
   }
 }
 
-# Rețeaua secundară KVM/libvirt complet izolată (cu tagul "internal" / mode = "none")
 resource "libvirt_network" "internal_net" {
   name      = "win-internal-${local.env}"
-  mode      = "none" # Izolată complet de internet (fără NAT/routing extern)
+  mode      = "none"
   addresses = ["10.30.0.0/16"]
+}
+
+# --- Libvirt Storage Pool (Creat automat din Terraform) ---
+resource "libvirt_pool" "default" {
+  name = "default"
+  type = "dir"
+  path = "/var/lib/libvirt/images"
 }
 
 # --- Docker Images ---
@@ -106,30 +111,26 @@ resource "docker_volume" "qbittorrent_config" {
 
 # --- Libvirt Resources (Windows Server VM) ---
 
-# Disc virtual pentru Windows Server (QCOW2)
 resource "libvirt_volume" "windows_os_disk" {
   name   = "windows-server-os-${local.env}.qcow2"
-  pool   = "default"
+  pool   = libvirt_pool.default.name
   format = "qcow2"
   size   = 68719476736 # 64 GB
 }
 
-# Mașina Virtuală nativă Windows Server cu 2 plăci de rețea
 resource "libvirt_domain" "windows_server" {
   name   = "windows-server-${local.env}"
-  memory = 4096 # 4 GB RAM
+  memory = 4096
   vcpu   = 2
 
   disk {
     volume_id = libvirt_volume.windows_os_disk.id
   }
 
-  # Placa de rețea 1 (Conectată la bridge-ul principal de rețea / LAN)
   network_interface {
-    bridge = "br0" # Înlocuiește cu interfața ta de bridge fizică de pe serverul Linux
+    bridge = "br0"
   }
 
-  # Placa de rețea 2 (A doua placă - cu rețeaua internă / izolată)
   network_interface {
     network_id     = libvirt_network.internal_net.id
     wait_for_lease = false
