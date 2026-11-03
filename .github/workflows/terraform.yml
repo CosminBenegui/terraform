@@ -40,9 +40,6 @@ jobs:
           cp -a . "$PROJECT_DIR"/
           rm -rf "$PROJECT_DIR/.git"
 
-      - name: Ensure media host folders
-        run: mkdir -p /home/cosmin/media/{movies,tv,downloads}
-
       - name: Ensure Windows Server ISO exists
         run: |
           SRC=/home/cosmin/Downloads/SERVER_EVAL_x64FRE_en-us.iso
