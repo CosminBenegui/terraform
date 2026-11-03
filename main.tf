@@ -6,10 +6,18 @@ terraform {
       source  = "kreuzwerker/docker"
       version = "~> 3.0"
     }
+    libvirt = {
+      source  = "dmacvicar/libvirt"
+      version = "~> 0.7.0"
+    }
   }
 }
 
 provider "docker" {}
+
+provider "libvirt" {
+  uri = "qemu:///system"
+}
 
 locals {
   env        = "test"
@@ -19,9 +27,9 @@ locals {
   media_root = "/home/cosmin/media"
 }
 
-# --- Networks (Network Cards / Interfaces) ---
+# --- Networks: Docker (Media Stack) & Libvirt (Windows VM) ---
 
-# Rețeaua principală (Media Network)
+# Rețeaua Docker pentru aplicațiile media
 resource "docker_network" "media" {
   name = "media-net-${local.env}"
 
@@ -31,18 +39,14 @@ resource "docker_network" "media" {
   }
 }
 
-# Rețeaua secundară cu tagul "internal" (Placă de rețea internă / izolată)
-resource "docker_network" "lan_internal" {
-  name     = "lan-internal-net-${local.env}"
-  internal = true # Izolată de internet (trafic exclusiv intern între containerele din această rețea)
-
-  ipam_config {
-    subnet  = "10.30.0.0/16"
-    gateway = "10.30.0.1"
-  }
+# Rețeaua secundară KVM/libvirt complet izolată (cu tagul "internal" / mode = "none")
+resource "libvirt_network" "internal_net" {
+  name      = "win-internal-${local.env}"
+  mode      = "none" # Izolată complet de internet (fără NAT/routing extern)
+  addresses = ["10.30.0.0/16"]
 }
 
-# --- Images ---
+# --- Docker Images ---
 
 resource "docker_image" "plex" {
   name         = "lscr.io/linuxserver/plex:latest"
@@ -69,13 +73,12 @@ resource "docker_image" "seerr" {
   keep_locally = true
 }
 
-# Imagine Windows Server (rulează via KVM în Docker)
-resource "docker_image" "windows_server" {
-  name         = "dockurr/windows:latest"
+resource "docker_image" "qbittorrent" {
+  name         = "lscr.io/linuxserver/qbittorrent:latest"
   keep_locally = true
 }
 
-# --- Config Volumes ---
+# --- Volumes ---
 
 resource "docker_volume" "plex_config" {
   name = "plex-config-${local.env}"
@@ -97,53 +100,49 @@ resource "docker_volume" "seerr_config" {
   name = "seerr-config-${local.env}"
 }
 
-resource "docker_volume" "win_server_data" {
-  name = "win-server-data-${local.env}"
+resource "docker_volume" "qbittorrent_config" {
+  name = "qbittorrent-config-${local.env}"
 }
 
-# --- Containers ---
+# --- Libvirt Resources (Windows Server VM) ---
 
-# Container Windows Server cu două plăci de rețea (una pe media, una pe internal)
-resource "docker_container" "windows_server" {
-  name       = "windows-server"
-  image      = docker_image.windows_server.name
-  restart    = "unless-stopped"
-  privileged = true # Necesar pentru KVM / virtualizare
+# Disc virtual pentru Windows Server (QCOW2)
+resource "libvirt_volume" "windows_os_disk" {
+  name   = "windows-server-os-${local.env}.qcow2"
+  pool   = "default"
+  format = "qcow2"
+  size   = 68719476736 # 64 GB
+}
 
-  env = [
-    "VERSION=win2022", # Setează Windows Server 2022
-    "RAM_SIZE=4G",
-    "CPU_CORES=2",
-    "DISK_SIZE=64G",
-  ]
+# Mașina Virtuală nativă Windows Server cu 2 plăci de rețea
+resource "libvirt_domain" "windows_server" {
+  name   = "windows-server-${local.env}"
+  memory = 4096 # 4 GB RAM
+  vcpu   = 2
 
-  # Placa de rețea 1 (Media Network)
-  networks_advanced {
-    name         = docker_network.media.name
-    ipv4_address = "10.20.0.50"
+  disk {
+    volume_id = libvirt_volume.windows_os_disk.id
   }
 
-  # Placa de rețea 2 (A doua placă - cu acces intern / izolat)
-  networks_advanced {
-    name         = docker_network.lan_internal.name
-    ipv4_address = "10.30.0.50"
+  # Placa de rețea 1 (Conectată la bridge-ul principal de rețea / LAN)
+  network_interface {
+    bridge = "br0" # Înlocuiește cu interfața ta de bridge fizică de pe serverul Linux
   }
 
-  volumes {
-    volume_name    = docker_volume.win_server_data.name
-    container_path = "/storage"
+  # Placa de rețea 2 (A doua placă - cu rețeaua internă / izolată)
+  network_interface {
+    network_id     = libvirt_network.internal_net.id
+    wait_for_lease = false
   }
 
-  # Acces Web Viewer (VNC/Web UI) și RDP
-  ports {
-    internal = 8006
-    external = 8006
-  }
-  ports {
-    internal = 3389
-    external = 3389
+  graphics {
+    type        = "vnc"
+    listen_type = "address"
+    autoport    = true
   }
 }
+
+# --- Docker Containers (Media Stack) ---
 
 resource "docker_container" "plex" {
   name  = "plex"
@@ -301,16 +300,55 @@ resource "docker_container" "seerr" {
   }
 }
 
+resource "docker_container" "qbittorrent" {
+  name  = "qbittorrent"
+  image = docker_image.qbittorrent.name
+
+  restart = "unless-stopped"
+  env = [
+    "PUID=${local.puid}",
+    "PGID=${local.pgid}",
+    "TZ=${local.tz}",
+    "WEBUI_PORT=8080",
+  ]
+
+  networks_advanced {
+    name = docker_network.media.name
+  }
+
+  volumes {
+    volume_name    = docker_volume.qbittorrent_config.name
+    container_path = "/config"
+  }
+  volumes {
+    host_path      = "${local.media_root}/downloads"
+    container_path = "/downloads"
+  }
+
+  ports {
+    internal = 8080
+    external = 8080
+  }
+}
+
 # --- Outputs ---
 
 output "urls" {
   value = {
-    windows_web_ui = "http://192.168.0.120:8006"
-    windows_rdp    = "192.168.0.120:3389"
-    plex           = "http://192.168.0.120:32400/web"
-    prowlarr       = "http://192.168.0.120:9696"
-    radarr         = "http://192.168.0.120:7878"
-    sonarr         = "http://192.168.0.120:8989"
-    seerr          = "http://192.168.0.120:5055"
+    plex        = "http://192.168.0.120:32400/web"
+    prowlarr    = "http://192.168.0.120:9696"
+    radarr      = "http://192.168.0.120:7878"
+    sonarr      = "http://192.168.0.120:8989"
+    seerr       = "http://192.168.0.120:5055"
+    qbittorrent = "http://192.168.0.120:8080"
+  }
+}
+
+output "media_host_paths" {
+  value = {
+    root      = local.media_root
+    movies    = "${local.media_root}/movies"
+    tv        = "${local.media_root}/tv"
+    downloads = "${local.media_root}/downloads"
   }
 }
