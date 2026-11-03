@@ -20,11 +20,13 @@ provider "libvirt" {
 }
 
 locals {
-  env        = "test"
-  tz         = "Europe/Bucharest"
-  puid       = "1000"
-  pgid       = "1000"
-  media_root = "/home/cosmin/media"
+  env              = "test"
+  tz               = "Europe/Bucharest"
+  puid             = "1000"
+  pgid             = "1000"
+  media_root       = "/home/cosmin/media"
+  # Already on the bare-metal host (not downloaded by Terraform).
+  windows_iso_path = "/home/cosmin/Downloads/SERVER_EVAL_x64FRE_en-us.iso"
 }
 
 # --- Networks: Docker (Media Stack) & Libvirt (Windows VM) ---
@@ -129,8 +131,18 @@ resource "libvirt_domain" "windows_server" {
   memory = 4096
   vcpu   = 2
 
+  # Empty OS disk first; ISO as file-backed CDROM (provider treats .iso as cdrom).
   disk {
     volume_id = libvirt_volume.windows_os_disk.id
+  }
+
+  disk {
+    file = local.windows_iso_path
+  }
+
+  # Empty hd → fall through to installer ISO (same idea as virt-manager).
+  boot_device {
+    dev = ["hd", "cdrom"]
   }
 
   network_interface {
@@ -146,6 +158,29 @@ resource "libvirt_domain" "windows_server" {
     type        = "vnc"
     listen_type = "address"
     autoport    = true
+  }
+
+  # Default disk bus is virtio; Windows Setup won't see it without virtio drivers.
+  # Force SATA for the OS disk so the installer can target the qcow2 volume.
+  xml {
+    xslt = <<-XSLT
+      <?xml version="1.0" ?>
+      <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+        <xsl:output omit-xml-declaration="yes" indent="yes"/>
+        <xsl:template match="node()|@*">
+          <xsl:copy>
+            <xsl:apply-templates select="node()|@*"/>
+          </xsl:copy>
+        </xsl:template>
+        <xsl:template match="/domain/devices/disk[@device='disk']/target/@bus">
+          <xsl:attribute name="bus">sata</xsl:attribute>
+        </xsl:template>
+        <xsl:template match="/domain/devices/disk[@device='disk']/target/@dev">
+          <xsl:attribute name="dev">sda</xsl:attribute>
+        </xsl:template>
+        <xsl:template match="/domain/devices/disk[@device='disk']/address"/>
+      </xsl:stylesheet>
+    XSLT
   }
 }
 
