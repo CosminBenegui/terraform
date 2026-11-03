@@ -117,7 +117,7 @@ resource "libvirt_volume" "windows_os_disk" {
   name   = "windows-srv-disk-${local.env}.qcow2"
   pool   = libvirt_pool.default.name
   format = "qcow2"
-  size   = 68719476736 # 64 GB
+  size   = 268435456000 # 250 GiB
 
   # Provider often leaves the volume as root:root; QEMU runs as libvirt-qemu.
   provisioner "local-exec" {
