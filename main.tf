@@ -1,4 +1,4 @@
-﻿terraform {
+terraform {
   required_version = ">= 1.5.0"
 
   required_providers {
@@ -12,25 +12,33 @@
 provider "docker" {}
 
 locals {
-  # Single lab env for now (workspace "test" only â€” one VM, shared ports).
-  env  = "test"
-  tz   = "Europe/Bucharest"
-  puid = "1000"
-  pgid = "1000"
-
-  # Host paths on the VM (shared so *arr + Plex see the same files)
+  env        = "test"
+  tz         = "Europe/Bucharest"
+  puid       = "1000"
+  pgid       = "1000"
   media_root = "/home/cosmin/media"
 }
 
-# Shared network â€” plex, prowlarr, radarr, sonarr, seerr
+# --- Networks (Network Cards / Interfaces) ---
+
+# Rețeaua principală (Media Network)
 resource "docker_network" "media" {
   name = "media-net-${local.env}"
 
-  # IPAM = private IP pool for this Docker network (course "address_space").
-  # Pin gateway so plan doesn't recreate the network every run.
   ipam_config {
     subnet  = "10.20.0.0/16"
     gateway = "10.20.0.1"
+  }
+}
+
+# Rețeaua secundară cu tagul "internal" (Placă de rețea internă / izolată)
+resource "docker_network" "lan_internal" {
+  name     = "lan-internal-net-${local.env}"
+  internal = true # Izolată de internet (trafic exclusiv intern între containerele din această rețea)
+
+  ipam_config {
+    subnet  = "10.30.0.0/16"
+    gateway = "10.30.0.1"
   }
 }
 
@@ -61,7 +69,13 @@ resource "docker_image" "seerr" {
   keep_locally = true
 }
 
-# --- Config volumes (per app) ---
+# Imagine Windows Server (rulează via KVM în Docker)
+resource "docker_image" "windows_server" {
+  name         = "dockurr/windows:latest"
+  keep_locally = true
+}
+
+# --- Config Volumes ---
 
 resource "docker_volume" "plex_config" {
   name = "plex-config-${local.env}"
@@ -83,11 +97,57 @@ resource "docker_volume" "seerr_config" {
   name = "seerr-config-${local.env}"
 }
 
-# --- Apps ---
+resource "docker_volume" "win_server_data" {
+  name = "win-server-data-${local.env}"
+}
+
+# --- Containers ---
+
+# Container Windows Server cu două plăci de rețea (una pe media, una pe internal)
+resource "docker_container" "windows_server" {
+  name       = "windows-server"
+  image      = docker_image.windows_server.name
+  restart    = "unless-stopped"
+  privileged = true # Necesar pentru KVM / virtualizare
+
+  env = [
+    "VERSION=win2022", # Setează Windows Server 2022
+    "RAM_SIZE=4G",
+    "CPU_CORES=2",
+    "DISK_SIZE=64G",
+  ]
+
+  # Placa de rețea 1 (Media Network)
+  networks_advanced {
+    name         = docker_network.media.name
+    ipv4_address = "10.20.0.50"
+  }
+
+  # Placa de rețea 2 (A doua placă - cu acces intern / izolat)
+  networks_advanced {
+    name         = docker_network.lan_internal.name
+    ipv4_address = "10.30.0.50"
+  }
+
+  volumes {
+    volume_name    = docker_volume.win_server_data.name
+    container_path = "/storage"
+  }
+
+  # Acces Web Viewer (VNC/Web UI) și RDP
+  ports {
+    internal = 8006
+    external = 8006
+  }
+  ports {
+    internal = 3389
+    external = 3389
+  }
+}
 
 resource "docker_container" "plex" {
   name  = "plex"
-  image = docker_image.plex.image_id
+  image = docker_image.plex.name
 
   restart = "unless-stopped"
   env = [
@@ -122,7 +182,7 @@ resource "docker_container" "plex" {
 
 resource "docker_container" "prowlarr" {
   name  = "prowlarr"
-  image = docker_image.prowlarr.image_id
+  image = docker_image.prowlarr.name
 
   restart = "unless-stopped"
   env = [
@@ -148,7 +208,7 @@ resource "docker_container" "prowlarr" {
 
 resource "docker_container" "radarr" {
   name  = "radarr"
-  image = docker_image.radarr.image_id
+  image = docker_image.radarr.name
 
   restart = "unless-stopped"
   env = [
@@ -182,7 +242,7 @@ resource "docker_container" "radarr" {
 
 resource "docker_container" "sonarr" {
   name  = "sonarr"
-  image = docker_image.sonarr.image_id
+  image = docker_image.sonarr.name
 
   restart = "unless-stopped"
   env = [
@@ -216,7 +276,7 @@ resource "docker_container" "sonarr" {
 
 resource "docker_container" "seerr" {
   name  = "seerr"
-  image = docker_image.seerr.image_id
+  image = docker_image.seerr.name
 
   restart = "unless-stopped"
   env = [
@@ -241,34 +301,16 @@ resource "docker_container" "seerr" {
   }
 }
 
+# --- Outputs ---
+
 output "urls" {
   value = {
-    plex     = "http://192.168.0.120:32400/web"
-    prowlarr = "http://192.168.0.120:9696"
-    radarr   = "http://192.168.0.120:7878"
-    sonarr   = "http://192.168.0.120:8989"
-    seerr    = "http://192.168.0.120:5055"
-  }
-}
-
-output "internal_links" {
-  value = {
-    radarr_from_prowlarr = "http://radarr:7878"
-    sonarr_from_prowlarr = "http://sonarr:8989"
-    plex_from_seerr      = "http://plex:32400"
-    radarr_from_seerr    = "http://radarr:7878"
-    sonarr_from_seerr    = "http://sonarr:8989"
-    movies_path_in_apps  = "/movies"
-    tv_path_in_apps      = "/tv"
-    downloads_path       = "/downloads"
-  }
-}
-
-output "media_host_paths" {
-  value = {
-    root      = local.media_root
-    movies    = "${local.media_root}/movies"
-    tv        = "${local.media_root}/tv"
-    downloads = "${local.media_root}/downloads"
+    windows_web_ui = "http://192.168.0.120:8006"
+    windows_rdp    = "192.168.0.120:3389"
+    plex           = "http://192.168.0.120:32400/web"
+    prowlarr       = "http://192.168.0.120:9696"
+    radarr         = "http://192.168.0.120:7878"
+    sonarr         = "http://192.168.0.120:8989"
+    seerr          = "http://192.168.0.120:5055"
   }
 }
