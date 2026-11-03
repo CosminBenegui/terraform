@@ -43,6 +43,21 @@ jobs:
       - name: Ensure media host folders
         run: mkdir -p /home/cosmin/media/{movies,tv,downloads}
 
+      # Orphan libvirt domains from failed applies break recreate (name already exists, not in TF state).
+      - name: Cleanup orphan Windows libvirt domains
+        run: |
+          for dom in windows-srv windows-server-test; do
+            virsh destroy "$dom" 2>/dev/null || true
+            virsh undefine "$dom" --nvram 2>/dev/null || virsh undefine "$dom" 2>/dev/null || true
+          done
+          # Fix ownership on existing Windows disks if present
+          for img in /var/lib/libvirt/images/windows-srv-disk-*.qcow2 \
+                     /var/lib/libvirt/images/windows-server-os-*.qcow2; do
+            [ -e "$img" ] || continue
+            sudo chown libvirt-qemu:kvm "$img" || true
+            sudo chmod 660 "$img" || true
+          done
+
       - name: Terraform init
         working-directory: ${{ env.PROJECT_DIR }}
         run: terraform init -upgrade
