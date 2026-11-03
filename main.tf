@@ -44,7 +44,7 @@ resource "libvirt_network" "internal_net" {
   addresses = ["10.30.0.0/16"]
 }
 
-# --- Libvirt Storage Pool (Creat automat din Terraform) ---
+# --- Libvirt Storage Pool ---
 resource "libvirt_pool" "default" {
   name = "default"
   type = "dir"
@@ -127,10 +127,12 @@ resource "libvirt_domain" "windows_server" {
     volume_id = libvirt_volume.windows_os_disk.id
   }
 
+  # Placa de rețea 1 (Folosește rețeaua NAT 'default' a libvirt pentru acces extern)
   network_interface {
-    bridge = "br0"
+    network_name = "default"
   }
 
+  # Placa de rețea 2 (A doua placă - complet izolată, internă)
   network_interface {
     network_id     = libvirt_network.internal_net.id
     wait_for_lease = false
