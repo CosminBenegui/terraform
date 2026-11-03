@@ -155,9 +155,10 @@ resource "libvirt_domain" "windows_server" {
   }
 
   graphics {
-    type        = "vnc"
-    listen_type = "address"
-    autoport    = true
+    type           = "vnc"
+    listen_type    = "address"
+    listen_address = "0.0.0.0" # LAN access (e.g. RealVNC on iOS → 192.168.0.120)
+    autoport       = true
   }
 
   # Default disk bus is virtio; Windows Setup won't see it without virtio drivers.

@@ -52,6 +52,15 @@ jobs:
           fi
           ls -lh "$ISO"
 
+      # libvirt_domain xml { xslt = ... } needs xsltproc on the runner host.
+      - name: Ensure xsltproc
+        run: |
+          if ! command -v xsltproc >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y xsltproc
+          fi
+          xsltproc --version | head -1
+
       # QEMU "Permission denied" on pool volumes is AppArmor; disable libvirt security driver on this lab host.
       - name: Disable libvirt AppArmor security driver
         run: |
