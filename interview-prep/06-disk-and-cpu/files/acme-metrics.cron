@@ -1,0 +1,2 @@
+# Minute job. One line per run. Rotation is separate.
+* * * * * root /usr/local/sbin/acme-metrics.sh

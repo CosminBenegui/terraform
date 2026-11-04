@@ -1,0 +1,14 @@
+[Unit]
+Description=Harborline inventory heartbeat collector
+After=network.target
+
+[Service]
+Type=simple
+User=collector
+Group=collector
+EnvironmentFile=/etc/acme/collector.env
+ExecStart=/usr/local/sbin/acme-collector.sh
+Restart=no
+
+[Install]
+WantedBy=multi-user.target

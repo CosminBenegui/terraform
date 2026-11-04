@@ -1,0 +1,14 @@
+[Unit]
+Description=Harborline debug load generator (must not stay enabled)
+After=network.target
+
+[Service]
+Type=simple
+Nice=15
+Environment=DEBUG_SPIN=1
+ExecStart=/usr/local/sbin/acme-debug-load.sh
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

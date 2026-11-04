@@ -1,0 +1,7 @@
+/var/log/acme/metrics.log
+    daily
+    rotate 7
+    compress
+    missingok
+    notifempty
+    create 0640 root adm
