@@ -46,3 +46,7 @@ _vm_*.py
 
 # Runner credential backups must never be in git
 runner-backup/
+
+# Generated on the Debian host
+secrets.env
+.env

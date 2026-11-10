@@ -1,0 +1,7 @@
+---
+media_apps:
+  - { name: Radarr, slug: radarr, host: radarr.lab.home }
+  - { name: Sonarr, slug: sonarr, host: sonarr.lab.home }
+  - { name: Prowlarr, slug: prowlarr, host: prowlarr.lab.home }
+  - { name: Seerr, slug: seerr, host: seerr.lab.home }
+  - { name: qBittorrent, slug: qbittorrent, host: qbit.lab.home }

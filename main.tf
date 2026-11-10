@@ -108,6 +108,19 @@ resource "libvirt_domain" "windows_server" {
   }
 }
 
+# Runs after every apply, once the VM and disk exist. Ansible configures the host,
+# Traefik, Authentik, and the media apps. A new timestamp forces this to run every apply.
+resource "terraform_data" "ansible_configure" {
+  depends_on = [libvirt_domain.windows_server]
+
+  triggers_replace = [timestamp()]
+
+  provisioner "local-exec" {
+    working_dir = "${path.module}/ansible"
+    command     = "stdbuf -oL -eL ansible-playbook site.yml"
+  }
+}
+
 output "windows_vnc" {
   value = "Connect RealVNC to 192.168.0.120 — port from: virsh -c qemu:///system vncdisplay windows-srv-test"
 }

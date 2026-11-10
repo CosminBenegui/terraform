@@ -1,0 +1,19 @@
+---
+- name: Ensure the Traefik directory exists
+  ansible.builtin.file:
+    path: /var/lib/lab/compose/traefik
+    state: directory
+    mode: "0755"
+
+- name: Render Traefik config
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "/var/lib/lab/compose/traefik/{{ item.dest }}"
+    mode: "0644"
+  loop:
+    - { src: traefik.yml.j2, dest: traefik.yml }
+    - { src: dynamic.yml.j2, dest: dynamic.yml }
+    - { src: compose.yml.j2, dest: compose.yml }
+
+- name: Start Traefik
+  ansible.builtin.command: docker compose -f /var/lib/lab/compose/traefik/compose.yml up -d

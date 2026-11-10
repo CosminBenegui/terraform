@@ -6,9 +6,7 @@ Self-hosted GitHub Actions deploy to the Debian VM (`debian-terraform` runner).
 
 Single lab workspace: **`test`** (one VM — ports/names can’t host a second full media stack).
 
-Stack: Plex, Prowlarr, Radarr, Sonarr, Seerr on Docker network `media-net-test`.
-
-See [MEDIA-SETUP.md](MEDIA-SETUP.md) for UI linking.
+Stack: Plex, Prowlarr, Radarr, Sonarr, Seerr, qBittorrent. Ansible links them and puts Authentik in front of the named URLs. See [PLAN.md](PLAN.md).
 
 ## Manual run
 

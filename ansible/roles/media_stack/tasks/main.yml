@@ -1,0 +1,84 @@
+---
+- name: Ensure media folders exist
+  ansible.builtin.file:
+    path: "/home/cosmin/media/{{ item }}"
+    state: directory
+    owner: cosmin
+    group: cosmin
+    mode: "0755"
+  loop:
+    - movies
+    - tv
+    - downloads
+
+- name: Ensure the media Docker network exists
+  ansible.builtin.command: docker network inspect media-net-test
+  register: media_net
+  changed_when: false
+  failed_when: false
+
+- name: Create the media Docker network
+  ansible.builtin.command: >-
+    docker network create --subnet 10.20.0.0/16 --gateway 10.20.0.1 media-net-test
+  when: media_net.rc != 0
+
+- name: Ensure the media compose directory exists
+  ansible.builtin.file:
+    path: /var/lib/lab/compose/media
+    state: directory
+    mode: "0755"
+
+- name: Render the media compose file
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: /var/lib/lab/compose/media/compose.yml
+    mode: "0644"
+  register: media_compose
+
+- name: Ensure config volumes exist
+  ansible.builtin.command: docker volume create {{ item }}
+  loop:
+    - plex-config-test
+    - prowlarr-config-test
+    - radarr-config-test
+    - sonarr-config-test
+    - seerr-config-test
+    - qbittorrent-config-test
+  changed_when: false
+
+- name: Check which media containers already exist
+  ansible.builtin.command: docker inspect {{ item }}
+  loop:
+    - plex
+    - prowlarr
+    - radarr
+    - sonarr
+    - seerr
+    - qbittorrent
+  register: media_inspect
+  changed_when: false
+  failed_when: false
+
+- name: Start the media stack when none of the containers exist
+  ansible.builtin.command: docker compose -f /var/lib/lab/compose/media/compose.yml up -d
+  when: media_inspect.results | selectattr('rc', 'equalto', 0) | list | length == 0
+
+- name: Start media containers that already exist
+  ansible.builtin.command: docker start {{ item.item }}
+  loop: "{{ media_inspect.results }}"
+  when:
+    - item.rc == 0
+    - media_inspect.results | selectattr('rc', 'equalto', 0) | list | length > 0
+  changed_when: false
+  failed_when: false
+
+- name: Refuse a partial media stack
+  ansible.builtin.assert:
+    quiet: false
+    that:
+      - media_inspect.results | selectattr('rc', 'ne', 0) | list | length == 0
+        or media_inspect.results | selectattr('rc', 'equalto', 0) | list | length == 0
+    fail_msg: >-
+      Some media containers exist and some do not. Start or remove the leftovers
+      so the stack is all present or all absent, then re-run.
+    success_msg: "Media containers are consistent."

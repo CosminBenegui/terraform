@@ -1,0 +1,19 @@
+services:
+  traefik:
+    image: traefik:latest
+    container_name: traefik
+    restart: unless-stopped
+    networks: [media]
+    command:
+      - --configFile=/etc/traefik/traefik.yml
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/lib/lab/compose/traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - /var/lib/lab/compose/traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
+
+networks:
+  media:
+    name: media-net-test
+    external: true

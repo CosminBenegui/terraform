@@ -1,0 +1,74 @@
+---
+- name: Ensure the lab secrets directory exists
+  ansible.builtin.file:
+    path: /home/cosmin/.config/lab
+    state: directory
+    owner: cosmin
+    group: cosmin
+    mode: "0700"
+
+- name: Create Authentik secrets on the host when missing
+  ansible.builtin.shell: |
+    set -euo pipefail
+    umask 077
+    python3 - <<'PY'
+    import secrets
+    from pathlib import Path
+    path = Path("/home/cosmin/.config/lab/secrets.env")
+    existing = {}
+    if path.exists():
+        for line in path.read_text().splitlines():
+            if "=" in line and not line.startswith("#"):
+                key, value = line.split("=", 1)
+                existing[key] = value
+    lines = [
+        f"AUTHENTIK_SECRET_KEY={existing.get('AUTHENTIK_SECRET_KEY', secrets.token_urlsafe(48))}",
+        f"AUTHENTIK_PG_PASS={existing.get('AUTHENTIK_PG_PASS', secrets.token_urlsafe(24))}",
+        "AUTHENTIK_BOOTSTRAP_PASSWORD=1234",
+        "AUTHENTIK_BOOTSTRAP_EMAIL=admin@lab.home",
+        "AUTHENTIK_BOOTSTRAP_USERNAME=admin",
+        f"AUTHENTIK_BOOTSTRAP_TOKEN={existing.get('AUTHENTIK_BOOTSTRAP_TOKEN', secrets.token_urlsafe(32))}",
+        "QBIT_PASSWORD=1234",
+    ]
+    path.write_text("\n".join(lines) + "\n")
+    print("created")
+    PY
+  args:
+    executable: /bin/bash
+  register: secrets_file
+  changed_when: "'created' in secrets_file.stdout"
+
+- name: Ensure the Authentik compose directory exists
+  ansible.builtin.file:
+    path: /var/lib/lab/compose/authentik
+    state: directory
+    mode: "0755"
+
+- name: Place the compose env file next to the project
+  ansible.builtin.copy:
+    src: /home/cosmin/.config/lab/secrets.env
+    dest: /var/lib/lab/compose/authentik/.env
+    remote_src: true
+    mode: "0600"
+
+- name: Render Authentik compose and blueprint
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "/var/lib/lab/compose/authentik/{{ item.dest }}"
+    mode: "0644"
+  loop:
+    - { src: compose.yml.j2, dest: compose.yml }
+    - { src: blueprint.yaml.j2, dest: media-apps.yaml }
+
+- name: Start Authentik
+  ansible.builtin.shell: |
+    set -a
+    # shellcheck disable=SC1091
+    source /home/cosmin/.config/lab/secrets.env
+    set +a
+    docker compose -f compose.yml up -d
+  args:
+    chdir: /var/lib/lab/compose/authentik
+    executable: /bin/bash
+  register: authentik_up
+  changed_when: "'Started' in authentik_up.stderr or 'Created' in authentik_up.stderr"
