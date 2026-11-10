@@ -25,6 +25,7 @@ resource "libvirt_network" "internal_net" {
   name      = "win-internal-${local.env}"
   mode      = "none"
   addresses = ["10.30.0.0/16"]
+  autostart = true
 }
 
 # --- Libvirt Storage Pool ---

@@ -107,6 +107,11 @@ jobs:
             sudo chmod 660 "$img"
             ls -la "$img"
           done
+          # Domain create fails when this network is defined but inactive.
+          virsh -c "$URI" net-start win-internal-test 2>/dev/null || true
+          virsh -c "$URI" net-autostart win-internal-test 2>/dev/null || true
+          virsh -c "$URI" net-start default 2>/dev/null || true
+          virsh -c "$URI" net-list --all
 
       - name: Terraform plan
         working-directory: ${{ env.PROJECT_DIR }}
