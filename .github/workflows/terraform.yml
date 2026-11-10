@@ -112,6 +112,10 @@ jobs:
           virsh -c "$URI" net-autostart win-internal-test 2>/dev/null || true
           virsh -c "$URI" net-start default 2>/dev/null || true
           virsh -c "$URI" net-list --all
+          # Volume create fails while the default pool is defined but inactive.
+          virsh -c "$URI" pool-start default 2>/dev/null || true
+          virsh -c "$URI" pool-autostart default 2>/dev/null || true
+          virsh -c "$URI" pool-list --all
 
       - name: Terraform plan
         working-directory: ${{ env.PROJECT_DIR }}

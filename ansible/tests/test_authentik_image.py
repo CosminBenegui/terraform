@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 import pathlib
+import sys
 import unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "roles/authentik/files"))
+import postgres_volume  # noqa: E402
 
 
 class AuthentikImageTests(unittest.TestCase):
@@ -23,6 +26,32 @@ class AuthentikImageTests(unittest.TestCase):
             "ghcr.io/goauthentik/server:latest",
             compose,
             "The missing latest tag is what made the runner fail the Authentik pull",
+        )
+        self.assertIn(
+            "authentik-db:/var/lib/postgresql\n",
+            compose,
+            "Postgres 18 stores the cluster under /var/lib/postgresql, not /var/lib/postgresql/data",
+        )
+        self.assertNotIn(
+            "/var/lib/postgresql/data",
+            compose,
+            "The old data mount is why authentik-postgresql keeps restarting",
+        )
+
+    def test_only_the_pre_18_volume_is_removed(self):
+        self.assertEqual(
+            postgres_volume.legacy_volume_name(
+                [{"Destination": "/var/lib/postgresql/data", "Name": "authentik_authentik-db"}]
+            ),
+            "authentik_authentik-db",
+            "A volume still mounted at /var/lib/postgresql/data has to be removed before Postgres 18 will start",
+        )
+        self.assertEqual(
+            postgres_volume.legacy_volume_name(
+                [{"Destination": "/var/lib/postgresql", "Name": "authentik_authentik-db"}]
+            ),
+            "",
+            "A volume already mounted at /var/lib/postgresql must be kept",
         )
 
 

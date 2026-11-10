@@ -33,7 +33,7 @@ def set_field_values(fields, values):
     return updated
 
 
-def build_arr_application(schema_entry, name, base_url, api_key, categories):
+def build_arr_application(schema_entry, name, base_url, api_key, categories, prowlarr_url="http://prowlarr:9696"):
     return {
         "name": name,
         "implementation": schema_entry["implementation"],
@@ -44,6 +44,7 @@ def build_arr_application(schema_entry, name, base_url, api_key, categories):
             set_field_values(
                 schema_entry["fields"],
                 {
+                    "prowlarrUrl": prowlarr_url,
                     "baseUrl": base_url,
                     "apiKey": api_key,
                     "syncCategories": categories,

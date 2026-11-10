@@ -60,6 +60,13 @@
     - { src: compose.yml.j2, dest: compose.yml }
     - { src: blueprint.yaml.j2, dest: media-apps.yaml }
 
+- name: Drop a Postgres volume mounted at the pre-18 data path
+  ansible.builtin.script: postgres_volume.py
+  args:
+    executable: python3
+  register: pg_volume
+  changed_when: "'removed' in pg_volume.stdout"
+
 - name: Start Authentik
   ansible.builtin.shell: |
     set -a

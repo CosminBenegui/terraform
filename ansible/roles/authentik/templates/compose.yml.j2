@@ -9,7 +9,7 @@ services:
       POSTGRES_USER: authentik
       POSTGRES_DB: authentik
     volumes:
-      - authentik-db:/var/lib/postgresql/data
+      - authentik-db:/var/lib/postgresql
     networks: [media]
   redis:
     image: docker.io/library/redis:latest

@@ -22,6 +22,7 @@ class LinkMediaTests(unittest.TestCase):
             "implementationName": "Radarr",
             "configContract": "RadarrSettings",
             "fields": [
+                {"name": "prowlarrUrl", "value": "http://localhost:9696"},
                 {"name": "baseUrl", "value": ""},
                 {"name": "apiKey", "value": ""},
                 {"name": "syncCategories", "value": []},
@@ -35,6 +36,11 @@ class LinkMediaTests(unittest.TestCase):
             fields["baseUrl"],
             "http://radarr:7878",
             "Prowlarr must call Radarr by container name, not localhost",
+        )
+        self.assertEqual(
+            fields["prowlarrUrl"],
+            "http://prowlarr:9696",
+            "Radarr rejects localhost:9696 because that address is inside the Radarr container",
         )
         self.assertIn(2000, fields["syncCategories"], "Movie categories must include the Radarr default 2000")
         self.assertEqual(
