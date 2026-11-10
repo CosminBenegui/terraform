@@ -18,7 +18,7 @@ services:
     command: --save 60 1 --loglevel warning
     networks: [media]
   server:
-    image: ghcr.io/goauthentik/server:latest
+    image: "{{ authentik_image }}"
     container_name: authentik
     restart: unless-stopped
     command: server
@@ -40,7 +40,7 @@ services:
     networks: [media]
     depends_on: [postgresql, redis]
   worker:
-    image: ghcr.io/goauthentik/server:latest
+    image: "{{ authentik_image }}"
     container_name: authentik-worker
     restart: unless-stopped
     command: worker

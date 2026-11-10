@@ -1,4 +1,6 @@
 ---
+# Authentik does not publish a latest tag.
+authentik_image: "ghcr.io/goauthentik/server:2026.8.5"
 media_apps:
   - { name: Radarr, slug: radarr, host: radarr.lab.home }
   - { name: Sonarr, slug: sonarr, host: sonarr.lab.home }
