@@ -1,0 +1,79 @@
+name: Terraform destroy
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: Type destroy to remove the Terraform-managed resources
+        required: true
+        type: string
+
+jobs:
+  destroy:
+    if: inputs.confirm == 'destroy'
+    runs-on: [self-hosted, terraform-vm]
+    env:
+      TF_IN_AUTOMATION: "true"
+      TF_INPUT: "false"
+      PYTHONUNBUFFERED: "1"
+      PROJECT_DIR: /home/cosmin/terraform-project
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Prepare Terraform working directory
+        run: |
+          mkdir -p "$PROJECT_DIR"
+          find "$PROJECT_DIR" -mindepth 1 -maxdepth 1 \
+            ! -name '.terraform' \
+            ! -name 'terraform.tfstate' \
+            ! -name 'terraform.tfstate.backup' \
+            ! -name 'terraform.tfstate.d' \
+            ! -name 'hello-*.txt' \
+            -exec rm -rf {} +
+          cp -a . "$PROJECT_DIR"/
+          rm -rf "$PROJECT_DIR/.git"
+
+      - name: Terraform init
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: terraform init -upgrade
+
+      - name: Select workspace test
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: terraform workspace select test || terraform workspace new test
+
+      - name: Start libvirt resources so destroy can remove them
+        run: |
+          URI=qemu:///system
+          virsh -c "$URI" net-start win-internal-test 2>/dev/null || true
+          virsh -c "$URI" net-start default 2>/dev/null || true
+          virsh -c "$URI" pool-start default 2>/dev/null || true
+          virsh -c "$URI" list --all
+          virsh -c "$URI" net-list --all
+          virsh -c "$URI" pool-list --all
+
+      - name: Move the staged ISO out of the pool
+        run: |
+          # Pool delete fails while the ISO is still in /var/lib/libvirt/images.
+          # Keep the copy in Downloads so the next apply can stage it again.
+          SRC=/home/cosmin/Downloads/SERVER_EVAL_x64FRE_en-us.iso
+          DST=/var/lib/libvirt/images/SERVER_EVAL_x64FRE_en-us.iso
+          if [ -f "$DST" ] && [ ! -f "$SRC" ]; then
+            sudo mv "$DST" "$SRC"
+          elif [ -f "$DST" ]; then
+            sudo rm -f "$DST"
+          fi
+          sudo ls -lh /var/lib/libvirt/images /home/cosmin/Downloads/SERVER_EVAL_x64FRE_en-us.iso || true
+
+      - name: Terraform destroy
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: stdbuf -oL -eL terraform destroy -auto-approve -input=false
+
+      - name: Show what remains
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: |
+          terraform state list || true
+          virsh -c qemu:///system list --all
+          virsh -c qemu:///system net-list --all
+          virsh -c qemu:///system pool-list --all
