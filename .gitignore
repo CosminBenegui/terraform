@@ -50,3 +50,6 @@ runner-backup/
 # Generated on the Debian host
 secrets.env
 .env
+
+__pycache__/
+*.pyc
