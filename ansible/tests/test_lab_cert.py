@@ -59,6 +59,12 @@ class LabCertTests(unittest.TestCase):
             tasks,
             "Ansible must skip openssl when the lab certificate already exists",
         )
+        shell_task = _task_block(tasks, "Issue the lab certificate when it is missing")
+        self.assertNotIn(
+            "\n    args:",
+            "\n" + shell_task,
+            "The shell task must not pass a nested args key; Ansible 2.19 forwards it to command and rejects it",
+        )
         self.assertNotIn(
             "docker compose",
             tasks,
@@ -78,6 +84,16 @@ class LabCertTests(unittest.TestCase):
             (ROOT / "roles/traefik/files/issue_lab_cert.py").exists(),
             "The certificate step must not live in a separate Python script",
         )
+
+
+def _task_block(text, name):
+    marker = f"- name: {name}\n"
+    start = text.index(marker)
+    rest = text[start:]
+    next_task = rest.find("\n- name:", len(marker))
+    if next_task == -1:
+        return rest
+    return rest[:next_task]
 
 
 def _issue(cert_dir):
