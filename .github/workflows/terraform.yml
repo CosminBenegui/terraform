@@ -50,6 +50,8 @@ jobs:
             echo "Missing $SRC — place the Eval ISO on the bare-metal host before apply."
             exit 1
           fi
+          # Destroy removes this directory with the pool. Recreate it before the copy.
+          sudo mkdir -p /var/lib/libvirt/images
           # QEMU runs as libvirt-qemu and cannot traverse /home/cosmin — stage into the pool.
           if [ ! -f "$DST" ]; then
             sudo cp "$SRC" "$DST"
