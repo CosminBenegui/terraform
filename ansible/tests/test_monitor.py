@@ -44,6 +44,12 @@ class MonitorTests(unittest.TestCase):
             traefik,
             "Traefik must forward monitor.lab.home to the Netdata container",
         )
+        traefik_compose = (ROOT / "roles/traefik/templates/compose.yml.j2").read_text()
+        self.assertIn(
+            "/var/lib/lab/compose/traefik:/etc/traefik:ro",
+            traefik_compose,
+            "Traefik must mount the config directory, or a replaced dynamic.yml stays invisible and monitor.lab.home 404s",
+        )
         self.assertIn(
             "{ name: Netdata, slug: netdata, host: monitor.lab.home }",
             authentik,

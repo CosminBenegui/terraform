@@ -10,8 +10,7 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - /var/lib/lab/compose/traefik/traefik.yml:/etc/traefik/traefik.yml:ro
-      - /var/lib/lab/compose/traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
+      - /var/lib/lab/compose/traefik:/etc/traefik:ro
 
 networks:
   media:

@@ -22,6 +22,11 @@ class AuthentikImageTests(unittest.TestCase):
             2,
             "Server and worker must use the same pinned Authentik image",
         )
+        self.assertEqual(
+            compose.count("AUTHENTIK_HOST: https://auth.lab.home"),
+            2,
+            "Without AUTHENTIK_HOST the browser is sent to http://localhost and the page is blank",
+        )
         self.assertNotIn(
             "ghcr.io/goauthentik/server:latest",
             compose,
