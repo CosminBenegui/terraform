@@ -9,12 +9,6 @@
     - /var/lib/lab/compose/grafana/provisioning/datasources
     - /var/lib/lab/compose/grafana/provisioning/dashboards
 
-- name: Render the Grafana compose file
-  ansible.builtin.template:
-    src: compose.yml.j2
-    dest: /var/lib/lab/compose/grafana/compose.yml
-    mode: "0644"
-
 - name: Install Grafana, Loki, Prometheus, and Alloy config
   ansible.builtin.copy:
     src: "{{ item.src }}"
@@ -28,5 +22,3 @@
     - { src: provisioning/dashboards/dashboards.yml, dest: provisioning/dashboards/dashboards.yml }
     - { src: provisioning/dashboards/lab.json, dest: provisioning/dashboards/lab.json }
 
-- name: Start Grafana
-  ansible.builtin.command: docker compose -f /var/lib/lab/compose/grafana/compose.yml up -d

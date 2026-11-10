@@ -1,11 +1,12 @@
 ---
-# Host config, ingress, Authentik, and media-app links.
-- name: Configure the Debian lab host
+# Host config and files. Terraform creates the containers and the Windows VM after this.
+- name: Prepare the Debian lab host
   hosts: debian
   become: true
   roles:
     - base
     - docker_host
+    - libvirt_host
     - dns
     - firewall
     - media_stack
@@ -13,4 +14,3 @@
     - grafana
     - authentik
     - traefik
-    - media_link

@@ -42,6 +42,31 @@ jobs:
           cp -a . "$PROJECT_DIR"/
           rm -rf "$PROJECT_DIR/.git"
 
+      - name: Install Ansible and xsltproc
+        run: |
+          sudo apt-get clean
+          sudo rm -rf /var/lib/apt/lists/*
+          sudo apt-get update -qq
+          sudo apt-get install -y ansible xsltproc
+          ansible-playbook --version | head -1
+          xsltproc --version | head -1
+
+      - name: Keep the Windows ISO in Downloads and stage a copy
+        run: |
+          SRC=/home/cosmin/Downloads/SERVER_EVAL_x64FRE_en-us.iso
+          DST=/var/lib/libvirt/images/SERVER_EVAL_x64FRE_en-us.iso
+          if [ ! -f "$SRC" ]; then
+            echo "Missing $SRC — place the Eval ISO on the bare-metal host before apply."
+            exit 1
+          fi
+          if [ -d /var/lib/libvirt/images ] && [ ! -f "$DST" ]; then
+            sudo cp "$SRC" "$DST"
+            sudo chown libvirt-qemu:kvm "$DST"
+            sudo chmod 644 "$DST"
+          fi
+          test -f "$SRC"
+          ls -lh "$SRC"
+
       - name: Terraform init
         working-directory: ${{ env.PROJECT_DIR }}
         run: terraform init -upgrade
@@ -51,40 +76,30 @@ jobs:
         run: |
           terraform workspace select test || terraform workspace new test
 
-      # The ISO is not a Terraform resource. Pool delete fails while it sits in the images directory.
-      # windows-srv-test itself is destroyed by Terraform from state. Do not undefine it here.
-      - name: Clear Windows leftovers Terraform does not own
+      - name: Clear orphan Windows domains Terraform does not own
+        working-directory: ${{ env.PROJECT_DIR }}
         run: |
           URI=qemu:///system
-          SRC=/home/cosmin/Downloads/SERVER_EVAL_x64FRE_en-us.iso
-          DST=/var/lib/libvirt/images/SERVER_EVAL_x64FRE_en-us.iso
-          if [ -f "$DST" ] && [ ! -f "$SRC" ]; then
-            sudo mv "$DST" "$SRC"
-          elif [ -f "$DST" ]; then
-            sudo rm -f "$DST"
-          fi
           for dom in windows-srv windows-server-test; do
             virsh -c "$URI" destroy "$dom" 2>/dev/null || true
             virsh -c "$URI" undefine "$dom" --nvram 2>/dev/null || virsh -c "$URI" undefine "$dom" 2>/dev/null || true
           done
+          if ! terraform state list 2>/dev/null | grep -qx 'libvirt_domain.windows_server'; then
+            virsh -c "$URI" destroy windows-srv-test 2>/dev/null || true
+            virsh -c "$URI" undefine windows-srv-test --nvram 2>/dev/null || virsh -c "$URI" undefine windows-srv-test 2>/dev/null || true
+          fi
           virsh -c "$URI" net-start win-internal-test 2>/dev/null || true
+          virsh -c "$URI" net-start default 2>/dev/null || true
           virsh -c "$URI" pool-start default 2>/dev/null || true
           virsh -c "$URI" list --all
+
+      - name: Prepare host files before plan
+        working-directory: ${{ env.PROJECT_DIR }}/ansible
+        run: stdbuf -oL -eL ansible-playbook site.yml
 
       - name: Terraform plan
         working-directory: ${{ env.PROJECT_DIR }}
         run: stdbuf -oL -eL terraform plan -out=tfplan -input=false
-
-      - name: Ensure Ansible is installed
-        if: >
-          github.event_name == 'push' ||
-          (github.event_name == 'workflow_dispatch' && inputs.action == 'apply')
-        run: |
-          sudo apt-get clean
-          sudo rm -rf /var/lib/apt/lists/*
-          sudo apt-get update -qq
-          sudo apt-get install -y ansible
-          ansible-playbook --version | head -1
 
       - name: Terraform apply
         if: >

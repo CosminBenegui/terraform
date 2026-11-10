@@ -2,7 +2,7 @@
 
 Created: 2026-11-10
 
-No cloud and no S3. Terraform state stays on the Debian host. There is no Windows VM.
+No cloud and no S3. Terraform state stays on the Debian host. Terraform creates the Docker stack and the Windows Server VM. Ansible only configures them.
 
 ## Who owns what
 

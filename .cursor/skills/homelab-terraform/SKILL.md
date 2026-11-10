@@ -4,7 +4,7 @@ description: >-
   Operate this Debian homelab Terraform repo: Ansible media stack, Glances,
   Traefik, and Authentik. Use when editing Terraform, Ansible, GitHub Actions,
   media apps, DNS for lab.home, or when applying or destroying on the
-  self-hosted runner. Do not recreate the Windows VM.
+  self-hosted runner. Terraform creates the Docker stack and the Windows Server. Ansible only configures.
 ---
 
 # Homelab Terraform
@@ -21,28 +21,32 @@ Replies stay in English. Stay on `main`. Do not check out or merge `interview-la
 
 ## What Terraform owns
 
-`main.tf` no longer creates a Windows VM. The libvirt provider stays so apply can destroy `windows-srv-test`, its disk, `win-internal-test`, and pool `default` while they are still in state. Do not add the domain back.
+Hard rule: Terraform creates, Ansible configures. See `.cursor/rules/terraform-creates.mdc`.
 
-`terraform_data.ansible_configure` uses `triggers_replace = [timestamp()]` and `stdbuf` so Ansible runs on every apply with live logs. That replace on every plan is intentional. Plain `virsh` is the session URI. Always `virsh -c qemu:///system`.
+`main.tf` creates the Docker network `media-net-test`, its volumes and containers, and the Windows Server: pool `default`, network `win-internal-test`, disk `windows-srv-disk-test.qcow2` (250 GiB), and domain `windows-srv-test`. Do not move those creates into Ansible.
+
+`terraform_data.ansible_prepare` runs `site.yml` before the containers and the VM. `terraform_data.ansible_configure` runs `site-configure.yml` after them. Both use `triggers_replace = [timestamp()]` and `stdbuf` so Ansible runs on every apply with live logs. That replace on every plan is intentional. Container resources must not use `timestamp()`. Plain `virsh` is the session URI. Always `virsh -c qemu:///system`.
 
 ## What Ansible owns
 
-`ansible/site.yml` on host `debian`, `become: true`, local connection. Role order: `base`, `docker_host`, `dns`, `firewall`, `media_stack`, `monitor`, `authentik`, `traefik`, `media_link`.
+`ansible/site.yml` on host `debian`, `become: true`, local connection. Role order: `base`, `docker_host`, `libvirt_host`, `dns`, `firewall`, `media_stack`, `monitor`, `grafana`, `authentik`, `traefik`. It writes files and host config. It does not start containers.
+
+`ansible/site-configure.yml` restarts Authentik and runs `media_link` after Terraform has created the containers.
 
 Docker network `media-net-test` (`10.20.0.0/16`). Images that publish `latest` use `:latest`. Authentik does not. Pin `ghcr.io/goauthentik/server:2026.8.5`.
 
 Plex stays on host port `32400` and is not behind Authentik. qBittorrent torrent port `6881` tcp/udp stays open. Plex sign-in and the Seerr first-run wizard stay manual.
 
-Firewall allows 22, 80, 443, 32400, 61208, 6881 only when ufw is already active. Never `ufw enable`. The `when` that checks `Status: active` must be a quoted string (Ansible 2.19).
+Firewall allows 22, 80, 443, 32400, 5900, 61208, 6881 only when ufw is already active. Never `ufw enable`. The `when` that checks `Status: active` must be a quoted string (Ansible 2.19).
 
 Workflow installs always `apt-get clean` and drop `/var/lib/apt/lists` first. Logs use `stdbuf -oL` and `PYTHONUNBUFFERED=1`.
 
 ## Do not regress
 
-- Before plan, move the staged Windows ISO out of `/var/lib/libvirt/images`. Pool delete fails while that file is there. Do not `virsh undefine windows-srv-test` in that step; Terraform destroys it from state.
+- The Windows ISO stays at `/home/cosmin/Downloads/SERVER_EVAL_x64FRE_en-us.iso`. Never delete that file. Stage a copy into `/var/lib/libvirt/images` for QEMU. Do not `virsh undefine windows-srv-test` while it is in Terraform state.
 - Postgres 18 volume is `authentik-db:/var/lib/postgresql`, not `/var/lib/postgresql/data`. `postgres_volume.py` drops a volume still mounted at the old path.
 - Outpost `authentik_host` and `authentik_host_browser` are `https://auth.lab.home`. Empty values send the browser to `http://localhost`. `AUTHENTIK_HOST` is set on server and worker. Blueprint is mounted on both.
-- Traefik file provider watches a directory mount `/var/lib/lab/compose/traefik:/etc/traefik:ro`. A file bind-mount goes stale when Ansible replaces the file. Traefik matches `Host`, so `https://192.168.0.120` is a 404. `auth.lab.home` has no Authentik middleware. `issue_lab_cert.py` creates a local CA and a leaf for `*.lab.home`, `lab.home`, and `192.168.0.120` only when the files are missing. Traefik uses that leaf as the default certificate. Clients trust `/var/lib/lab/certs/lab-ca.crt`. Do not regenerate the key on every apply.
+- Traefik file provider watches a directory mount `/var/lib/lab/compose/traefik:/etc/traefik:ro`. A file bind-mount goes stale when Ansible replaces the file. Traefik matches `Host`, so `https://192.168.0.120` is a 404. `auth.lab.home` has no Authentik middleware. The Traefik role runs openssl for a local CA and a leaf for `*.lab.home`, `lab.home`, and `192.168.0.120` only when the files are missing. Traefik uses that leaf as the default certificate. Clients trust `/var/lib/lab/certs/lab-ca.crt`. Do not regenerate the key on every apply.
 - Prowlarr apps use `prowlarrUrl=http://prowlarr:9696` and Docker DNS base URLs. `http://localhost:9696` makes Radarr reject the app. qBittorrent login needs `Referer`. Field payloads are `{name, value}` only. Seerr link failures before the wizard are `skipped-until-wizard`.
 - Monitoring is Glances, not Netdata. Image `nicolargo/glances:latest`, web mode, `pid: host`, Docker socket read-only. It has no password of its own. Open `http://192.168.0.120:61208`, or `https://monitor.lab.home` with Authentik `admin` / `1234`. Traefik reaches it at `http://10.20.0.1:61208` because Glances uses the host network. The Netdata container, volumes, and Authentik app stay marked for removal. Grafana stays as the friendlier UI at `https://grafana.lab.home`. Its login form is off; Authentik's `X-authentik-username` header signs the user in. Loki stores container logs, Prometheus stores host metrics, Alloy collects both. Do not publish Grafana's port on the host.
 - Secrets stay in `/home/cosmin/.config/lab/secrets.env` (gitignored). Login `admin` / `1234`, qBittorrent web `1234`.

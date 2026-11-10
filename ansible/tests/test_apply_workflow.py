@@ -7,33 +7,38 @@ WORKFLOW = ROOT / ".github/workflows/terraform.yml"
 
 
 class ApplyWorkflowTests(unittest.TestCase):
-    def test_apply_destroys_the_windows_vm_instead_of_recreating_it(self):
+    def test_apply_creates_the_windows_vm_and_keeps_the_iso(self):
         workflow = WORKFLOW.read_text()
         main = (ROOT / "main.tf").read_text()
-        self.assertNotIn(
-            "libvirt_domain",
+        self.assertIn(
+            'resource "libvirt_domain" "windows_server"',
             main,
-            "The Windows domain must stay out of main.tf or the next apply creates it again",
+            "Terraform must create the Windows Server domain",
         )
         self.assertIn(
-            'source  = "dmacvicar/libvirt"',
-            main,
-            "The libvirt provider has to stay so apply can destroy the VM still recorded in state",
-        )
-        self.assertNotIn(
             'sudo cp "$SRC" "$DST"',
             workflow,
-            "Apply must not stage the Windows ISO back into the pool",
-        )
-        self.assertLess(
-            workflow.index('sudo rm -f "$DST"'),
-            workflow.index("Terraform plan"),
-            "The staged ISO must leave the pool before Terraform deletes that pool",
+            "The workflow must stage a copy of the ISO into the libvirt pool",
         )
         self.assertNotIn(
-            "undefine windows-srv-test",
+            'sudo rm -f "$SRC"',
             workflow,
-            "windows-srv-test is still in Terraform state, so the workflow must not undefine it before apply",
+            "The workflow must not delete the ISO in Downloads",
+        )
+        self.assertNotIn(
+            'sudo rm -f "$DST"',
+            workflow,
+            "The workflow must not delete the staged ISO",
+        )
+        self.assertIn(
+            "grep -qx 'libvirt_domain.windows_server'",
+            workflow,
+            "windows-srv-test may be undefined only when it is not already in Terraform state",
+        )
+        self.assertLess(
+            workflow.index("ansible-playbook site.yml"),
+            workflow.index("Terraform plan"),
+            "Host files and the Authentik secrets must exist before Terraform plans the containers",
         )
 
 
