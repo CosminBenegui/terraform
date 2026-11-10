@@ -46,11 +46,10 @@ The first Authentik login is `admin` / `1234` at `https://auth.lab.home`. qBitto
 ## Pipeline
 
 1. GitHub Actions on the self-hosted runner.
-2. A pull request runs `Terraform plan` only. It copies state into a temp directory, does not apply, and does not run Ansible. Push to `main` still applies.
-3. On `main`, Terraform plans.
-4. Clean apt lists, then install Ansible.
-5. Terraform apply. Terraform itself runs `ansible-playbook site.yml`.
-6. Ansible configures the host, ingress, Authentik, and media links.
+2. A pull request runs `Terraform plan` only, then comments `@pipeline-relay` with the plan. That comment starts platform and network. It does not apply.
+3. Clean apt lists, then install Ansible.
+4. Terraform apply. Terraform itself runs `ansible-playbook site.yml`.
+5. Ansible configures the host, ingress, Authentik, and media links.
 
 A manual `terraform apply` on the host does the same Ansible run. The workflow does not call the playbook a second time.
 

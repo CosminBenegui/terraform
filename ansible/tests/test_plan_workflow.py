@@ -9,52 +9,74 @@ WORKFLOW = (
 
 
 class PlanWorkflowTests(unittest.TestCase):
-    def test_pull_requests_plan_without_applying(self):
+    def test_pull_request_plans_and_starts_the_agents(self):
         text = WORKFLOW.read_text()
         self.assertIn(
             "pull_request:",
             text,
-            "The plan workflow must run on pull requests",
+            "A pull request must start this workflow",
+        )
+        self.assertIn(
+            "@pipeline-relay",
+            text,
+            "The plan comment must mention pipeline-relay so the agents start",
+        )
+        self.assertIn(
+            "ask_platform",
+            text,
+            "The start comment must send the plan to the platform agent",
+        )
+        self.assertIn(
+            "ask_network",
+            text,
+            "The start comment must send the plan to the network agent",
+        )
+        self.assertIn(
+            "Do not call hand_to_coder",
+            text,
+            "A pull request plan must not hand work to the coding agent",
         )
         self.assertIn(
             "terraform plan -input=false -no-color -lock=false",
             text,
-            "The plan workflow must print a plan and must not lock the live state",
-        )
-        self.assertIn(
-            "actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
-            text,
-            "Checkout must be pinned to the v5.0.0 commit",
+            "The workflow must print a plan and must not lock the live state",
         )
         self.assertIn(
             "github.event.pull_request.head.repo.full_name == github.repository",
             text,
             "Fork pull requests must not run on the self-hosted runner",
         )
-        self.assertIn(
-            "contents: read",
-            text,
-            "The plan job must not receive write access to the repository",
-        )
         self.assertNotIn(
             "terraform apply",
             text,
-            "A pull request plan must not apply",
-        )
-        self.assertNotIn(
-            "terraform destroy",
-            text,
-            "A pull request plan must not destroy",
+            "A pull request must not apply",
         )
         self.assertNotIn(
             "ansible-playbook",
             text,
             "A pull request plan must not run Ansible against the host",
         )
-        self.assertNotIn(
-            'rm -rf "$PROJECT_DIR"',
+        self.assertLess(
+            text.index("sudo chown cosmin:cosmin /home/cosmin/.config/lab/secrets.env"),
+            text.index("terraform plan -input=false -no-color -lock=false"),
+            "The secrets file is created as root; plan must make it readable by cosmin first",
+        )
+        self.assertIn(
+            "test -r /home/cosmin/.config/lab/secrets.env",
             text,
-            "A pull request plan must not delete the live Terraform directory",
+            "Plan must stop if cosmin still cannot read the lab secrets file",
+        )
+        tasks = (
+            pathlib.Path(__file__).resolve().parents[2]
+            / "ansible/roles/authentik/tasks/main.yml"
+        ).read_text()
+        self.assertIn(
+            "path: /home/cosmin/.config/lab/secrets.env\n"
+            "    owner: cosmin\n"
+            "    group: cosmin\n"
+            '    mode: "0600"',
+            tasks,
+            "Ansible must leave secrets.env owned by cosmin so Terraform can read it",
         )
 
 

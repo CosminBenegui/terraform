@@ -38,6 +38,13 @@
   register: secrets_file
   changed_when: "'created' in secrets_file.stdout"
 
+- name: Keep lab secrets readable by the Terraform user
+  ansible.builtin.file:
+    path: /home/cosmin/.config/lab/secrets.env
+    owner: cosmin
+    group: cosmin
+    mode: "0600"
+
 - name: Ensure the Authentik compose directory exists
   ansible.builtin.file:
     path: /var/lib/lab/compose/authentik
