@@ -56,6 +56,28 @@ class PlanWorkflowTests(unittest.TestCase):
             text,
             "A pull request plan must not run Ansible against the host",
         )
+        self.assertLess(
+            text.index("sudo chown cosmin:cosmin /home/cosmin/.config/lab/secrets.env"),
+            text.index("terraform plan -input=false -no-color -lock=false"),
+            "The secrets file is created as root; plan must make it readable by cosmin first",
+        )
+        self.assertIn(
+            "test -r /home/cosmin/.config/lab/secrets.env",
+            text,
+            "Plan must stop if cosmin still cannot read the lab secrets file",
+        )
+        tasks = (
+            pathlib.Path(__file__).resolve().parents[2]
+            / "ansible/roles/authentik/tasks/main.yml"
+        ).read_text()
+        self.assertIn(
+            "path: /home/cosmin/.config/lab/secrets.env\n"
+            "    owner: cosmin\n"
+            "    group: cosmin\n"
+            '    mode: "0600"',
+            tasks,
+            "Ansible must leave secrets.env owned by cosmin so Terraform can read it",
+        )
 
 
 if __name__ == "__main__":
