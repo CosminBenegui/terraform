@@ -47,3 +47,11 @@ entries:
 {% for app in media_apps %}
         - !Find [authentik_providers_proxy.proxyprovider, [name, {{ app.name }}]]
 {% endfor %}
+  - model: authentik_providers_proxy.proxyprovider
+    state: absent
+    identifiers:
+      name: Netdata
+  - model: authentik_core.application
+    state: absent
+    identifiers:
+      slug: netdata

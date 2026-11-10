@@ -1,15 +1,18 @@
 ---
-- name: Ensure the Netdata compose directory exists
+- name: Ensure the Glances compose directory exists
   ansible.builtin.file:
     path: /var/lib/lab/compose/monitor
     state: directory
     mode: "0755"
 
-- name: Render the Netdata compose file
+- name: Render the Glances config and compose file
   ansible.builtin.template:
-    src: compose.yml.j2
-    dest: /var/lib/lab/compose/monitor/compose.yml
+    src: "{{ item.src }}"
+    dest: "/var/lib/lab/compose/monitor/{{ item.dest }}"
     mode: "0644"
+  loop:
+    - { src: glances.conf.j2, dest: glances.conf }
+    - { src: compose.yml.j2, dest: compose.yml }
 
-- name: Start Netdata
+- name: Start Glances
   ansible.builtin.command: docker compose -f /var/lib/lab/compose/monitor/compose.yml up -d
