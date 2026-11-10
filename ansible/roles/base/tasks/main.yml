@@ -5,6 +5,5 @@
       - curl
       - ca-certificates
       - python3
-      - xsltproc
     state: present
     update_cache: true

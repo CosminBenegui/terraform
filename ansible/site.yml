@@ -1,13 +1,11 @@
 ---
 # Host config, ingress, Authentik, and media-app links.
-# Terraform still owns the Windows VM. VNC :5900 is left open.
 - name: Configure the Debian lab host
   hosts: debian
   become: true
   roles:
     - base
     - docker_host
-    - libvirt_host
     - dns
     - firewall
     - media_stack

@@ -14,8 +14,9 @@ Direct ports stay open. Names below go through Traefik and Authentik:
 | https://seerr.lab.home | Seerr |
 | https://qbit.lab.home | qBittorrent web UI |
 | https://auth.lab.home | Authentik |
+| https://monitor.lab.home | Glances |
 
-Point the client DNS at `192.168.0.120` so `*.lab.home` resolves. VNC stays `192.168.0.120:5900`.
+Point the client DNS at `192.168.0.179` so `*.lab.home` resolves. Glances is `http://192.168.0.120:61208`.
 
 ## What the playbook links
 
