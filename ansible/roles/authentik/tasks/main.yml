@@ -59,6 +59,7 @@
   loop:
     - { src: compose.yml.j2, dest: compose.yml }
     - { src: blueprint.yaml.j2, dest: media-apps.yaml }
+  register: authentik_templates
 
 - name: Drop a Postgres volume mounted at the pre-18 data path
   ansible.builtin.script: postgres_volume.py
@@ -79,3 +80,8 @@
     executable: /bin/bash
   register: authentik_up
   changed_when: "'Started' in authentik_up.stderr or 'Created' in authentik_up.stderr"
+
+- name: Reload Authentik after a blueprint change
+  ansible.builtin.command: docker restart authentik authentik-worker
+  when: authentik_templates.changed
+  changed_when: true

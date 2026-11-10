@@ -11,6 +11,7 @@
     - dns
     - firewall
     - media_stack
+    - monitor
     - authentik
     - traefik
     - media_link

@@ -7,3 +7,4 @@ media_apps:
   - { name: Prowlarr, slug: prowlarr, host: prowlarr.lab.home }
   - { name: Seerr, slug: seerr, host: seerr.lab.home }
   - { name: qBittorrent, slug: qbittorrent, host: qbit.lab.home }
+  - { name: Netdata, slug: netdata, host: monitor.lab.home }

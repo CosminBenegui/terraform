@@ -1,0 +1,15 @@
+---
+- name: Ensure the Netdata compose directory exists
+  ansible.builtin.file:
+    path: /var/lib/lab/compose/monitor
+    state: directory
+    mode: "0755"
+
+- name: Render the Netdata compose file
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: /var/lib/lab/compose/monitor/compose.yml
+    mode: "0644"
+
+- name: Start Netdata
+  ansible.builtin.command: docker compose -f /var/lib/lab/compose/monitor/compose.yml up -d

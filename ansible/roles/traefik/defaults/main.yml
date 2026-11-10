@@ -5,3 +5,4 @@ media_apps:
   - { slug: prowlarr, host: prowlarr.lab.home, upstream: "http://prowlarr:9696" }
   - { slug: seerr, host: seerr.lab.home, upstream: "http://seerr:5055" }
   - { slug: qbittorrent, host: qbit.lab.home, upstream: "http://qbittorrent:8080" }
+  - { slug: netdata, host: monitor.lab.home, upstream: "http://netdata:19999" }
