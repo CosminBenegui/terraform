@@ -16,5 +16,5 @@
     - 5900/tcp
     - 6881/tcp
     - 6881/udp
-  when: ufw_status.rc == 0 and 'Status: active' in ufw_status.stdout
+  when: "ufw_status.rc == 0 and 'Status: active' in ufw_status.stdout"
   changed_when: true
