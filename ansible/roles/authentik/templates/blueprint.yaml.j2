@@ -40,6 +40,9 @@ entries:
       name: authentik Embedded Outpost
     attrs:
       type: proxy
+      config:
+        authentik_host: https://auth.lab.home
+        authentik_host_browser: https://auth.lab.home
       providers:
 {% for app in media_apps %}
         - !Find [authentik_providers_proxy.proxyprovider, [name, {{ app.name }}]]

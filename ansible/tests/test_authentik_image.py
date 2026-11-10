@@ -27,6 +27,12 @@ class AuthentikImageTests(unittest.TestCase):
             2,
             "Without AUTHENTIK_HOST the browser is sent to http://localhost and the page is blank",
         )
+        blueprint = (ROOT / "roles/authentik/templates/blueprint.yaml.j2").read_text()
+        self.assertIn(
+            "authentik_host_browser: https://auth.lab.home",
+            blueprint,
+            "The outpost must send the browser to auth.lab.home, not localhost",
+        )
         self.assertNotIn(
             "ghcr.io/goauthentik/server:latest",
             compose,
