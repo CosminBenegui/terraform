@@ -64,8 +64,7 @@
         -out /var/lib/lab/compose/traefik/certs/lab.home.crt \
         -days 825 -sha256 \
         -extfile /var/lib/lab/compose/traefik/certs/lab.home.ext
-    args:
-      creates: /var/lib/lab/compose/traefik/certs/lab.home.crt
+    creates: /var/lib/lab/compose/traefik/certs/lab.home.crt
 
 - name: Lock down lab certificate permissions
   ansible.builtin.file:
