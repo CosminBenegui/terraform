@@ -10,6 +10,7 @@
     - firewall
     - media_stack
     - monitor
+    - grafana
     - authentik
     - traefik
     - media_link

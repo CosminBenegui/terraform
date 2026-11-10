@@ -12,6 +12,7 @@ Each line is a failure already seen on this lab and the fix that has to stay in 
 | A lab name 404s after Ansible rewrites Traefik config | Traefik mounts the config directory, not individual files. |
 | Pool delete says the directory is not empty | The Windows ISO is still in `/var/lib/libvirt/images`. Move it back to Downloads before destroy. |
 | `*.lab.home` does not resolve on a client | Client DNS is the router. Query `dig @192.168.0.179`. Do not treat Traefik or fstab as the resolver. |
+| Browser warns that the lab certificate is untrusted | Trust `/var/lib/lab/certs/lab-ca.crt`. The leaf must keep `DNS:*.lab.home` and `IP:192.168.0.120`. Do not replace the key on every apply. |
 | Destroy skipped | `confirm` was not exactly `destroy`. |
 
 Direct checks that do not need DNS: `http://192.168.0.120:7878` Radarr, `:8989` Sonarr, `:9696` Prowlarr, `:5055` Seerr, `:8080` qBittorrent, `:32400/web` Plex, `:61208` Glances, `:9000` Authentik. Named HTTPS URLs need a client that resolves `lab.home`.

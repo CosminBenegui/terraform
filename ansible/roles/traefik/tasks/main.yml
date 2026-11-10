@@ -5,6 +5,18 @@
     state: directory
     mode: "0755"
 
+- name: Install openssl for the lab certificate
+  ansible.builtin.apt:
+    name: openssl
+    state: present
+
+- name: Issue the lab CA and wildcard certificate when they are missing
+  ansible.builtin.script: issue_lab_cert.py
+  args:
+    executable: python3
+  register: lab_cert
+  changed_when: "'created' in lab_cert.stdout"
+
 - name: Render Traefik config
   ansible.builtin.template:
     src: "{{ item.src }}"

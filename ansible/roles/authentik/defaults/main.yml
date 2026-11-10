@@ -8,3 +8,4 @@ media_apps:
   - { name: Seerr, slug: seerr, host: seerr.lab.home }
   - { name: qBittorrent, slug: qbittorrent, host: qbit.lab.home }
   - { name: Glances, slug: glances, host: monitor.lab.home }
+  - { name: Grafana, slug: grafana, host: grafana.lab.home }

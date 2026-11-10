@@ -15,8 +15,11 @@ Direct ports stay open. Names below go through Traefik and Authentik:
 | https://qbit.lab.home | qBittorrent web UI |
 | https://auth.lab.home | Authentik |
 | https://monitor.lab.home | Glances |
+| https://grafana.lab.home | Grafana (metrics and container logs) |
 
 Point the client DNS at `192.168.0.179` so `*.lab.home` resolves. Glances is `http://192.168.0.120:61208`.
+
+Ansible creates a local CA and a certificate for `*.lab.home` and `192.168.0.120`. The public CA file on the host is `/var/lib/lab/certs/lab-ca.crt`. Trust that file in the browser or the OS certificate store. A second apply does not replace an existing key.
 
 ## What the playbook links
 

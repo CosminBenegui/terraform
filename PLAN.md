@@ -30,7 +30,7 @@ http://radarr:7878
 
 Same path for Sonarr, Prowlarr, Seerr, and the qBittorrent web UI.
 
-`auth.lab.home` goes to Authentik with no login loop. Plex stays on `:32400`. Torrent port `6881` stays open. Glances is on `:61208` and `https://monitor.lab.home`.
+`auth.lab.home` goes to Authentik with no login loop. Plex stays on `:32400`. Torrent port `6881` stays open. Glances is on `:61208` and `https://monitor.lab.home`. Grafana is `https://grafana.lab.home` and uses the same Authentik login. Traefik serves a lab CA certificate for `*.lab.home`. Trust `/var/lib/lab/certs/lab-ca.crt` on each client.
 
 The first Authentik login is `admin` / `1234` at `https://auth.lab.home`. qBittorrent web UI uses the same password, and Radarr and Sonarr use it as the download client.
 

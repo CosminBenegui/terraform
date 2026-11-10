@@ -4,7 +4,7 @@
     path: /etc/hosts
     marker: "# {mark} ANSIBLE LAB.HOME"
     block: |
-      192.168.0.120 radarr.lab.home sonarr.lab.home prowlarr.lab.home seerr.lab.home qbit.lab.home auth.lab.home traefik.lab.home monitor.lab.home
+      192.168.0.120 radarr.lab.home sonarr.lab.home prowlarr.lab.home seerr.lab.home qbit.lab.home auth.lab.home traefik.lab.home monitor.lab.home grafana.lab.home
 
 - name: Install dnsmasq for LAN clients
   ansible.builtin.apt:

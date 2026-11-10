@@ -41,3 +41,12 @@ http:
         servers:
           - url: {{ app.upstream }}
 {% endfor %}
+tls:
+  certificates:
+    - certFile: /etc/traefik/certs/lab.home.crt
+      keyFile: /etc/traefik/certs/lab.home.key
+  stores:
+    default:
+      defaultCertificate:
+        certFile: /etc/traefik/certs/lab.home.crt
+        keyFile: /etc/traefik/certs/lab.home.key
