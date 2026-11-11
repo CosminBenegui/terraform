@@ -35,10 +35,30 @@ class ApplyWorkflowTests(unittest.TestCase):
             workflow,
             "windows-srv-test may be undefined only when it is not already in Terraform state",
         )
+        self.assertNotIn(
+            "ansible-playbook site.yml",
+            workflow,
+            "The apply workflow must not run the media playbook",
+        )
+        self.assertNotIn(
+            "install -y ansible",
+            workflow,
+            "The apply workflow must not install Ansible",
+        )
         self.assertLess(
-            workflow.index("ansible-playbook site.yml"),
+            workflow.index("Terraform init"),
             workflow.index("Terraform plan"),
-            "Host files and the Authentik secrets must exist before Terraform plans the containers",
+            "Init must run before plan",
+        )
+        self.assertLess(
+            workflow.index("Terraform plan"),
+            workflow.index("terraform apply -auto-approve -input=false tfplan"),
+            "Apply must use the plan that was just created",
+        )
+        self.assertIn(
+            "xsltproc",
+            workflow,
+            "The Windows domain XSLT needs xsltproc on the host",
         )
 
 
