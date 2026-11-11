@@ -42,13 +42,12 @@ jobs:
           cp -a . "$PROJECT_DIR"/
           rm -rf "$PROJECT_DIR/.git"
 
-      - name: Install Ansible and xsltproc
+      - name: Install xsltproc
         run: |
           sudo apt-get clean
           sudo rm -rf /var/lib/apt/lists/*
           sudo apt-get update -qq
-          sudo apt-get install -y ansible xsltproc
-          ansible-playbook --version | head -1
+          sudo apt-get install -y xsltproc
           xsltproc --version | head -1
 
       - name: Keep the Windows ISO in Downloads and stage a copy
@@ -92,10 +91,6 @@ jobs:
           virsh -c "$URI" net-start default 2>/dev/null || true
           virsh -c "$URI" pool-start default 2>/dev/null || true
           virsh -c "$URI" list --all
-
-      - name: Prepare host files before plan
-        working-directory: ${{ env.PROJECT_DIR }}/ansible
-        run: stdbuf -oL -eL ansible-playbook site.yml
 
       - name: Terraform plan
         working-directory: ${{ env.PROJECT_DIR }}

@@ -1,12 +1,11 @@
 ---
-description: Terraform creates the lab. Ansible only configures it.
+description: Terraform defines the Windows Server VM. Ansible is not part of this lesson.
 alwaysApply: true
 ---
 
-# Terraform creates, Ansible configures
+# Terraform defines the Windows VM
 
-- Terraform creates. Docker networks, volumes, images, and containers are Terraform resources in `main.tf`. The Windows Server is too: `libvirt_pool`, `libvirt_network`, `libvirt_volume`, and `libvirt_domain`.
-- Ansible configures. It installs host packages, writes config files, DNS, firewall, certificates, Authentik blueprints, and app links. `libvirt_host` installs libvirt, sets `security_driver = "none"`, and makes the staged ISO readable. It does not define the VM.
-- Ansible does not create or start the stack. No `docker network create`, `docker volume create`, `docker compose up`, `docker run`, or `virsh define`.
-- Terraform calls Ansible. `site.yml` writes files before the containers exist. `site-configure.yml` links the apps after they exist.
+- This lesson is Terraform and the Windows Server only. There is no Ansible and no media stack.
+- Terraform defines `libvirt_pool`, `libvirt_network`, `libvirt_volume`, and `libvirt_domain` in `main.tf`.
 - The installer ISO is never deleted. It stays at `/home/cosmin/Downloads/SERVER_EVAL_x64FRE_en-us.iso`. A copy is staged into `/var/lib/libvirt/images` so QEMU can boot it. The Downloads file remains the original.
+- Do not `virsh undefine windows-srv-test` while that domain is in Terraform state.
