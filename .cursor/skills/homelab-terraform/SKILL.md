@@ -22,7 +22,7 @@ Replies stay in English. Stay on `main` for lab work. Do not check out or merge 
 
 `main.tf` defines the Windows Server: pool `default`, network `win-internal-test`, disk `windows-srv-disk-test.qcow2` (250 GiB), and domain `windows-srv-test`. The libvirt URI is `qemu:///system`.
 
-There is no Ansible. Do not add playbooks, `ansible-playbook`, or a Docker media stack while this lesson is the Windows VM.
+There is no Ansible. Do not add playbooks, `ansible-playbook`, or Docker containers while this lesson is the Windows VM. Keep the `kreuzwerker/docker` provider until the `test` state no longer contains Docker resources. Terraform cannot read that state without it.
 
 ## Do not regress
 

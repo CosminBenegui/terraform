@@ -20,11 +20,16 @@ class WindowsVmTests(unittest.TestCase):
             main,
             "The original installer ISO must stay in Downloads",
         )
+        self.assertIn(
+            "kreuzwerker/docker",
+            main,
+            "State still tracks the Docker stack, so the provider must stay until those resources are gone",
+        )
         for gone in (
             "ansible-playbook",
-            "provider \"docker\"",
             "docker_container",
-            "kreuzwerker/docker",
+            "docker_volume",
+            "docker_network",
         ):
             self.assertNotIn(gone, main, f"The Windows lesson must not keep {gone}")
 

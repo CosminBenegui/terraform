@@ -6,12 +6,20 @@ terraform {
       source  = "dmacvicar/libvirt"
       version = "~> 0.7.0"
     }
+    # The workspace state still tracks the old Docker stack. Terraform needs
+    # this provider to read that state. main.tf no longer declares those resources.
+    docker = {
+      source  = "kreuzwerker/docker"
+      version = "~> 3.0"
+    }
   }
 }
 
 provider "libvirt" {
   uri = "qemu:///system"
 }
+
+provider "docker" {}
 
 locals {
   env                = "test"
