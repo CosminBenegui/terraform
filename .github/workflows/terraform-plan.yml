@@ -41,11 +41,6 @@ jobs:
             cp "$PROJECT_DIR/terraform.tfstate" "$PLAN_DIR/terraform.tfstate"
           fi
           cd "$PLAN_DIR"
-          if [ ! -r /home/cosmin/.config/lab/secrets.env ]; then
-            sudo chown cosmin:cosmin /home/cosmin/.config/lab/secrets.env
-            sudo chmod 600 /home/cosmin/.config/lab/secrets.env
-          fi
-          test -r /home/cosmin/.config/lab/secrets.env
           terraform init -input=false
           terraform workspace select test
           terraform plan -input=false -no-color -lock=false | tee "$RUNNER_TEMP/terraform-plan.txt"
