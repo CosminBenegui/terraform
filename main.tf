@@ -512,6 +512,9 @@ resource "docker_container" "authentik" {
     target    = "/blueprints/custom/media-apps.yaml"
     read_only = true
   }
+  tmpfs = {
+    "/dev/shm" = ""
+  }
   networks_advanced {
     name = docker_network.media.name
   }
@@ -541,6 +544,9 @@ resource "docker_container" "authentik_worker" {
     source    = "/var/lib/lab/compose/authentik/media-apps.yaml"
     target    = "/blueprints/custom/media-apps.yaml"
     read_only = true
+  }
+  tmpfs = {
+    "/dev/shm" = ""
   }
   networks_advanced {
     name = docker_network.media.name
