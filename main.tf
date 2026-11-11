@@ -37,21 +37,10 @@ locals {
   }
 }
 
-# site.yml writes config files and host packages before any container or VM exists.
-resource "terraform_data" "ansible_prepare" {
-  triggers_replace = [timestamp()]
-
-  provisioner "local-exec" {
-    working_dir = "${path.module}/ansible"
-    command     = "stdbuf -oL -eL ansible-playbook site.yml"
-  }
-}
-
 # --- Docker network and images ---
 
 resource "docker_network" "media" {
-  depends_on = [terraform_data.ansible_prepare]
-  name       = "media-net-${local.env}"
+  name = "media-net-${local.env}"
 
   ipam_config {
     subnet  = "10.20.0.0/16"
@@ -60,91 +49,76 @@ resource "docker_network" "media" {
 }
 
 resource "docker_image" "plex" {
-  depends_on   = [terraform_data.ansible_prepare]
   name         = "lscr.io/linuxserver/plex:latest"
   keep_locally = true
 }
 
 resource "docker_image" "prowlarr" {
-  depends_on   = [terraform_data.ansible_prepare]
   name         = "lscr.io/linuxserver/prowlarr:latest"
   keep_locally = true
 }
 
 resource "docker_image" "radarr" {
-  depends_on   = [terraform_data.ansible_prepare]
   name         = "lscr.io/linuxserver/radarr:latest"
   keep_locally = true
 }
 
 resource "docker_image" "sonarr" {
-  depends_on   = [terraform_data.ansible_prepare]
   name         = "lscr.io/linuxserver/sonarr:latest"
   keep_locally = true
 }
 
 resource "docker_image" "seerr" {
-  depends_on   = [terraform_data.ansible_prepare]
   name         = "ghcr.io/seerr-team/seerr:latest"
   keep_locally = true
 }
 
 resource "docker_image" "qbittorrent" {
-  depends_on   = [terraform_data.ansible_prepare]
   name         = "lscr.io/linuxserver/qbittorrent:latest"
   keep_locally = true
 }
 
 resource "docker_image" "glances" {
-  depends_on   = [terraform_data.ansible_prepare]
   name         = "nicolargo/glances:latest"
   keep_locally = true
 }
 
 resource "docker_image" "traefik" {
-  depends_on   = [terraform_data.ansible_prepare]
   name         = "traefik:latest"
   keep_locally = true
 }
 
 resource "docker_image" "postgres" {
-  depends_on   = [terraform_data.ansible_prepare]
   name         = "docker.io/library/postgres:latest"
   keep_locally = true
 }
 
 resource "docker_image" "redis" {
-  depends_on   = [terraform_data.ansible_prepare]
   name         = "docker.io/library/redis:latest"
   keep_locally = true
 }
 
 resource "docker_image" "authentik" {
-  depends_on   = [terraform_data.ansible_prepare]
   name         = local.authentik_image
   keep_locally = true
 }
 
 resource "docker_image" "grafana" {
-  depends_on   = [terraform_data.ansible_prepare]
   name         = "grafana/grafana:latest"
   keep_locally = true
 }
 
 resource "docker_image" "loki" {
-  depends_on   = [terraform_data.ansible_prepare]
   name         = "grafana/loki:latest"
   keep_locally = true
 }
 
 resource "docker_image" "prometheus" {
-  depends_on   = [terraform_data.ansible_prepare]
   name         = "prom/prometheus:latest"
   keep_locally = true
 }
 
 resource "docker_image" "alloy" {
-  depends_on   = [terraform_data.ansible_prepare]
   name         = "grafana/alloy:latest"
   keep_locally = true
 }
@@ -152,58 +126,47 @@ resource "docker_image" "alloy" {
 # --- Volumes ---
 
 resource "docker_volume" "plex_config" {
-  depends_on = [terraform_data.ansible_prepare]
-  name       = "plex-config-${local.env}"
+  name = "plex-config-${local.env}"
 }
 
 resource "docker_volume" "prowlarr_config" {
-  depends_on = [terraform_data.ansible_prepare]
-  name       = "prowlarr-config-${local.env}"
+  name = "prowlarr-config-${local.env}"
 }
 
 resource "docker_volume" "radarr_config" {
-  depends_on = [terraform_data.ansible_prepare]
-  name       = "radarr-config-${local.env}"
+  name = "radarr-config-${local.env}"
 }
 
 resource "docker_volume" "sonarr_config" {
-  depends_on = [terraform_data.ansible_prepare]
-  name       = "sonarr-config-${local.env}"
+  name = "sonarr-config-${local.env}"
 }
 
 resource "docker_volume" "seerr_config" {
-  depends_on = [terraform_data.ansible_prepare]
-  name       = "seerr-config-${local.env}"
+  name = "seerr-config-${local.env}"
 }
 
 resource "docker_volume" "qbittorrent_config" {
-  depends_on = [terraform_data.ansible_prepare]
-  name       = "qbittorrent-config-${local.env}"
+  name = "qbittorrent-config-${local.env}"
 }
 
 resource "docker_volume" "authentik_db" {
-  depends_on = [terraform_data.ansible_prepare]
-  name       = "authentik-db"
+  name = "authentik-db"
 }
 
 resource "docker_volume" "grafana_data" {
-  depends_on = [terraform_data.ansible_prepare]
-  name       = "grafana-data"
+  name = "grafana-data"
 }
 
 resource "docker_volume" "loki_data" {
-  depends_on = [terraform_data.ansible_prepare]
-  name       = "loki-data"
+  name = "loki-data"
 }
 
 resource "docker_volume" "prometheus_data" {
-  depends_on = [terraform_data.ansible_prepare]
-  name       = "prometheus-data"
+  name = "prometheus-data"
 }
 
 resource "docker_volume" "alloy_data" {
-  depends_on = [terraform_data.ansible_prepare]
-  name       = "alloy-data"
+  name = "alloy-data"
 }
 
 # --- Media containers ---
@@ -688,17 +651,15 @@ resource "docker_container" "alloy" {
 # --- Windows Server ---
 
 resource "libvirt_network" "internal_net" {
-  depends_on = [terraform_data.ansible_prepare]
-  name       = "win-internal-${local.env}"
-  mode       = "none"
-  addresses  = ["10.30.0.0/16"]
+  name      = "win-internal-${local.env}"
+  mode      = "none"
+  addresses = ["10.30.0.0/16"]
 }
 
 resource "libvirt_pool" "default" {
-  depends_on = [terraform_data.ansible_prepare]
-  name       = "default"
-  type       = "dir"
-  path       = "/var/lib/libvirt/images"
+  name = "default"
+  type = "dir"
+  path = "/var/lib/libvirt/images"
 
   # The pool build creates the directory. Copy the ISO after that, and never delete Downloads.
   provisioner "local-exec" {
@@ -770,34 +731,6 @@ resource "libvirt_domain" "windows_server" {
         <xsl:template match="/domain/devices/disk[@device='disk']/address"/>
       </xsl:stylesheet>
     XSLT
-  }
-}
-
-# App links need the containers to be up. Config files were written by ansible_prepare.
-resource "terraform_data" "ansible_configure" {
-  depends_on = [
-    docker_container.plex,
-    docker_container.prowlarr,
-    docker_container.radarr,
-    docker_container.sonarr,
-    docker_container.seerr,
-    docker_container.qbittorrent,
-    docker_container.glances,
-    docker_container.traefik,
-    docker_container.authentik,
-    docker_container.authentik_worker,
-    docker_container.grafana,
-    docker_container.loki,
-    docker_container.prometheus,
-    docker_container.alloy,
-    libvirt_domain.windows_server,
-  ]
-
-  triggers_replace = [timestamp()]
-
-  provisioner "local-exec" {
-    working_dir = "${path.module}/ansible"
-    command     = "stdbuf -oL -eL ansible-playbook site-configure.yml"
   }
 }
 
