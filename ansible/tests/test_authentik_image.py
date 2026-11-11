@@ -101,10 +101,20 @@ class AuthentikImageTests(unittest.TestCase):
                     block,
                     f"{name} must not set a {limit} limit",
                 )
-            self.assertIn(
-                '"/dev/shm" = ""',
+            self.assertNotIn(
+                "tmpfs =",
                 block,
-                f"{name} must mount /dev/shm as a tmpfs with no size option",
+                f"{name} tmpfs map is planned as null",
+            )
+            self.assertNotIn(
+                "size_bytes",
+                block,
+                f"{name} must not set size_bytes; size_bytes is forbidden",
+            )
+            self.assertIn(
+                '    type   = "tmpfs"\n    target = "/dev/shm"',
+                block,
+                f"{name} mounts block recreates the container without a size cap",
             )
         for name in ("server", "worker"):
             service = _compose_service(compose, name)
