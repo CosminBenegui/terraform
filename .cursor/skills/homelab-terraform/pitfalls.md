@@ -15,5 +15,6 @@ Each line is a failure already seen on this lab and the fix that has to stay in 
 | Browser warns that the lab certificate is untrusted | Trust `/var/lib/lab/certs/lab-ca.crt`. The leaf must keep `DNS:*.lab.home` and `IP:192.168.0.120`. Do not replace the key on every apply. |
 | Destroy skipped | `confirm` was not exactly `destroy`. |
 | `secrets.env: permission denied` | Ansible writes that file as root (`become` and `umask 077`). Keep `owner: cosmin` and mode `0600`. The plan workflow chowns it before `terraform plan`. |
+| Authentik stays on "Server is starting up" | Server and worker need `shm_size` 512 MB. Docker's 64 MB `/dev/shm` leaves both containers unhealthy. |
 
 Direct checks that do not need DNS: `http://192.168.0.120:7878` Radarr, `:8989` Sonarr, `:9696` Prowlarr, `:5055` Seerr, `:8080` qBittorrent, `:32400/web` Plex, `:61208` Glances, `:9000` Authentik. Named HTTPS URLs need a client that resolves `lab.home`.

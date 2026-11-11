@@ -486,10 +486,11 @@ resource "docker_container" "authentik_redis" {
 }
 
 resource "docker_container" "authentik" {
-  name    = "authentik"
-  image   = docker_image.authentik.image_id
-  restart = "unless-stopped"
-  command = ["server"]
+  name      = "authentik"
+  image     = docker_image.authentik.image_id
+  restart   = "unless-stopped"
+  shm_size  = 512
+  command   = ["server"]
   env = [
     "AUTHENTIK_SECRET_KEY=${local.secret_map["AUTHENTIK_SECRET_KEY"]}",
     "AUTHENTIK_HOST=https://auth.lab.home",
@@ -522,10 +523,11 @@ resource "docker_container" "authentik" {
 }
 
 resource "docker_container" "authentik_worker" {
-  name    = "authentik-worker"
-  image   = docker_image.authentik.image_id
-  restart = "unless-stopped"
-  command = ["worker"]
+  name      = "authentik-worker"
+  image     = docker_image.authentik.image_id
+  restart   = "unless-stopped"
+  shm_size  = 512
+  command   = ["worker"]
   env = [
     "AUTHENTIK_SECRET_KEY=${local.secret_map["AUTHENTIK_SECRET_KEY"]}",
     "AUTHENTIK_HOST=https://auth.lab.home",

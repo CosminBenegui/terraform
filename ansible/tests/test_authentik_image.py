@@ -48,6 +48,17 @@ class AuthentikImageTests(unittest.TestCase):
             compose,
             "The old data mount is why authentik-postgresql keeps restarting",
         )
+        main = (ROOT.parent / "main.tf").read_text()
+        self.assertEqual(
+            main.count("shm_size  = 512"),
+            2,
+            "Authentik server and worker need 512MB of /dev/shm or the startup page never clears",
+        )
+        self.assertEqual(
+            compose.count("shm_size: 512mb"),
+            2,
+            "The Authentik compose spec must give the server and the worker 512MB of shared memory",
+        )
 
     def test_only_the_pre_18_volume_is_removed(self):
         self.assertEqual(
