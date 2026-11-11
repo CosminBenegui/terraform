@@ -66,6 +66,29 @@ class TerraformCreatesTests(unittest.TestCase):
                 f"Ansible must not create the stack with {forbidden}",
             )
 
+    def test_site_configure_migrates_authentik_before_the_worker_starts(self):
+        text = (ANSIBLE / "site-configure.yml").read_text()
+        self.assertNotIn(
+            "docker restart authentik authentik-worker",
+            text,
+            "Restarting the worker with the server locks the empty-database migration",
+        )
+        self.assertIn(
+            "docker stop authentik-worker",
+            text,
+            "The worker must be stopped before the server migrates",
+        )
+        self.assertLess(
+            text.index("docker restart authentik"),
+            text.index("docker start authentik-worker"),
+            "The server must restart and become ready before the worker starts",
+        )
+        self.assertIn(
+            "/-/health/ready/",
+            text,
+            "The worker must wait until Authentik reports ready",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

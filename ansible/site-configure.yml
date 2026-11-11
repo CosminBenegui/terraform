@@ -4,8 +4,25 @@
   hosts: debian
   become: true
   tasks:
-    - name: Reload Authentik so the blueprint is applied
-      ansible.builtin.command: docker restart authentik authentik-worker
+    - name: Stop the Authentik worker before the server migrates
+      ansible.builtin.command: docker stop authentik-worker
+      changed_when: true
+
+    - name: Restart the Authentik server so it migrates alone
+      ansible.builtin.command: docker restart authentik
+      changed_when: true
+
+    - name: Wait until Authentik is ready
+      ansible.builtin.uri:
+        url: http://127.0.0.1:9000/-/health/ready/
+        status_code: 200
+      register: authentik_ready
+      retries: 60
+      delay: 5
+      until: authentik_ready.status | default(0) == 200
+
+    - name: Start the Authentik worker after migrations
+      ansible.builtin.command: docker start authentik-worker
       changed_when: true
   roles:
     - media_link
