@@ -1,9 +1,0 @@
----
-- name: Install host packages Ansible and Terraform rely on
-  ansible.builtin.apt:
-    name:
-      - curl
-      - ca-certificates
-      - python3
-    state: present
-    update_cache: true

@@ -1,9 +1,0 @@
----
-media_apps:
-  - { slug: radarr, host: radarr.lab.home, upstream: "http://radarr:7878" }
-  - { slug: sonarr, host: sonarr.lab.home, upstream: "http://sonarr:8989" }
-  - { slug: prowlarr, host: prowlarr.lab.home, upstream: "http://prowlarr:9696" }
-  - { slug: seerr, host: seerr.lab.home, upstream: "http://seerr:5055" }
-  - { slug: qbittorrent, host: qbit.lab.home, upstream: "http://qbittorrent:8080" }
-  - { slug: glances, host: monitor.lab.home, upstream: "http://10.20.0.1:61208" }
-  - { slug: grafana, host: grafana.lab.home, upstream: "http://grafana:3000" }
